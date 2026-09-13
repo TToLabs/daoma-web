@@ -209,7 +209,7 @@
        nativa y agrega body.nativo, que vía CSS lo fija abajo — mismo
        patrón que Rumbo/MyMargin. No mover este bloque de acá: su
        posición en el HTML es la que usa la versión web. -->
-  <nav class="nav-categorias" role="tablist" aria-label="Secciones">
+  <nav class="nav-categorias" id="nav-categorias" role="tablist" aria-label="Secciones">
     <button class="nav-item activo" data-cat="agenda" type="button" onclick="irACategoria('agenda')">
       <span class="ico-circulo"><svg class="ico" aria-hidden="true"><use href="#i-calendario"/></svg></span>
       Agenda
@@ -403,6 +403,10 @@ async function entrarConCredenciales() {
   config = res.config;
   document.getElementById('login-wrap').classList.add('oculto');
   document.getElementById('panel').classList.remove('oculto');
+  // En la app nativa, nav-categorias vive fuera de #panel (ver
+  // detectarPlataforma) y arranca oculto — recién se muestra al loguear.
+  var nav = document.getElementById('nav-categorias');
+  if (nav) nav.classList.remove('oculto');
   pintarConfig();
   cargarReservas();
   return res;
@@ -466,6 +470,17 @@ function irACategoria(cat) {
 function detectarPlataforma() {
   if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
     document.body.classList.add('nativo');
+    // El backdrop-filter de .app (la tarjeta del panel) crea un
+    // "containing block" propio para sus hijos position:fixed — es una
+    // regla real de CSS, no un bug de Capacitor. Sin esto, el menú queda
+    // fijo relativo a la tarjeta (que crece con el contenido) en vez de
+    // a la ventana, y se termina moviendo con el scroll. Sacándolo del
+    // DOM de #panel a hijo directo de <body> lo deja fijo de verdad.
+    var nav = document.getElementById('nav-categorias');
+    if (nav) {
+      nav.classList.add('oculto');
+      document.body.appendChild(nav);
+    }
   }
 }
 detectarPlataforma();
