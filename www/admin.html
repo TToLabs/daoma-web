@@ -95,14 +95,14 @@
      barra se fija abajo, estilo Rumbo/MyMargin — regla fija para todas
      las apps: menú arriba en la web, abajo en la APK. */
   .nav-categorias {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px;
     margin: 14px 0; padding: 4px; background: var(--surface-2); border-radius: var(--r-btn);
   }
   .nav-item {
-    display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
     border: none; background: none; cursor: pointer; font: inherit;
-    font-size: 13px; font-weight: 600; color: var(--text-2);
-    padding: 9px 4px; border-radius: 9px;
+    font-size: 11px; font-weight: 600; color: var(--text-2);
+    padding: 8px 2px; border-radius: 9px;
   }
   .nav-item .ico-circulo { display: flex; align-items: center; justify-content: center; }
   /* Activa en azul (--info), NO el verde --primary que ya usan botones y
@@ -112,14 +112,13 @@
 
   body.nativo .nav-categorias {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; margin: 0;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     border-radius: 0; background: var(--surface); border-top: 1px solid var(--border);
-    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
     box-shadow: 0 -2px 12px rgba(35,36,31,0.08);
   }
-  body.nativo .nav-item { flex-direction: column; gap: 3px; font-size: 11.5px; color: var(--text-3); }
+  body.nativo .nav-item { color: var(--text-3); }
   body.nativo .nav-item.activo { background: none; color: var(--info); }
-  body.nativo svg.ico { width: 22px; height: 22px; }
   body.nativo svg.ico { width: 22px; height: 22px; }
   body.nativo #panel { padding-bottom: 76px; }
 
@@ -137,6 +136,14 @@
   .estado-atendida { background: var(--primary-soft); color: var(--primary); }
   .estado-cancelada, .estado-rechazada, .estado-expirada, .estado-no_asistio { background: var(--danger-soft); color: var(--danger); }
   .estado-pendiente_recuperar { background: var(--accent-soft); color: var(--accent); }
+
+  .btn-whatsapp { background: #E7F5EC; color: #1F7A3D; }
+  .historial-cont { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
+  .historial-item { border: 1px solid var(--border); border-radius: var(--r-btn); padding: 10px 12px; margin-top: 8px; font-size: 13.5px; }
+  .historial-item .historial-fecha { font-weight: 700; margin-bottom: 4px; }
+  .historial-item p { margin: 2px 0; color: var(--text-2); }
+  .historial-vacio { color: var(--text-2); font-size: 13.5px; margin-top: 6px; }
+  .historial-form { margin-top: 12px; border-top: 1px dashed var(--border-strong); padding-top: 10px; }
   .reserva-acciones { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
   .aceptar-domicilio { display: flex; gap: 8px; margin-top: 10px; align-items: end; flex-wrap: wrap; }
   .aceptar-domicilio input { width: auto; }
@@ -180,6 +187,8 @@
   <symbol id="i-precio" viewBox="0 0 24 24"><path d="M12 3v18M16.5 7.5c0-1.7-2-2.7-4.5-2.7S7.5 5.9 7.5 7.8s2 2.5 4.5 3 4.5 1.2 4.5 3.1-2 3-4.5 3-4.5-1.1-4.5-2.8"/></symbol>
   <symbol id="i-lista" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></symbol>
   <symbol id="i-ajustes" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.35a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.65 15a1.7 1.7 0 0 0-1.56-1.04H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.65 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.65a1.7 1.7 0 0 0 1.04-1.56V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15 4.65a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.35 9a1.7 1.7 0 0 0 1.56 1.04H21a2 2 0 1 1 0 4h-.09A1.7 1.7 0 0 0 19.4 15Z"/></symbol>
+  <symbol id="i-cliente" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20.5c0-4.1 3.6-6.5 8-6.5s8 2.4 8 6.5"/></symbol>
+  <symbol id="i-whatsapp" viewBox="0 0 24 24"><path d="M17 14.2c-.3-.2-1.8-.9-2-1s-.5-.1-.7.1-.7 1-.9 1.2-.3.2-.6.1a6.6 6.6 0 0 1-1.9-1.2 7.2 7.2 0 0 1-1.3-1.7c-.1-.3 0-.4.1-.6l.4-.4c.1-.1.2-.3.2-.4a.5.5 0 0 0 0-.4c-.1-.1-.7-1.6-.9-2.2s-.5-.5-.7-.5h-.6a1.1 1.1 0 0 0-.8.4 3.3 3.3 0 0 0-1 2.4c0 1.4 1 2.8 1.2 3s2 3 4.7 4.2a7.9 7.9 0 0 0 3.2.9c.3 0 .9 0 1.5-.6a2.6 2.6 0 0 0 .7-1.9c0-.2-.2-.3-.5-.4Z"/><path d="M12 3a9 9 0 0 0-7.7 13.6L3 21l4.5-1.2A9 9 0 1 0 12 3Z"/></symbol>
 </svg>
 
 <!-- LOGIN -->
@@ -213,6 +222,10 @@
     <button class="nav-item activo" data-cat="agenda" type="button" onclick="irACategoria('agenda')">
       <span class="ico-circulo"><svg class="ico" aria-hidden="true"><use href="#i-calendario"/></svg></span>
       Agenda
+    </button>
+    <button class="nav-item" data-cat="clientes" type="button" onclick="irACategoria('clientes')">
+      <span class="ico-circulo"><svg class="ico" aria-hidden="true"><use href="#i-cliente"/></svg></span>
+      Clientes
     </button>
     <button class="nav-item" data-cat="precios" type="button" onclick="irACategoria('precios')">
       <span class="ico-circulo"><svg class="ico" aria-hidden="true"><use href="#i-precio"/></svg></span>
@@ -260,6 +273,15 @@
     <p class="hint" style="margin-top:8px;">Pacientes que cancelaron o no asistieron, guardados aparte para retomar contacto y ofrecerles usar lo ya abonado en una nueva sesión.</p>
     <button class="btn btn-ghost btn-sm" onclick="cargarReservas()">↻ Actualizar</button>
     <div id="lista-pendientes"></div>
+  </div>
+
+  <!-- CLIENTES: directorio armado agrupando las reservas por teléfono
+       (sin ficha nueva que cargar a mano). Cada tarjeta tiene botones
+       de contacto directo y un historial clínico expandible. -->
+  <div class="vista" id="vista-clientes">
+    <p class="hint" style="margin-top:8px;">Directorio armado a partir de las reservas — agrupa todas las sesiones de cada persona por teléfono.</p>
+    <button class="btn btn-ghost btn-sm" onclick="cargarClientes()">↻ Actualizar</button>
+    <div id="lista-clientes"></div>
   </div>
 
   <!-- HORARIOS -->
@@ -444,6 +466,7 @@ if (USUARIO && PIN) entrarConCredenciales().catch(function(){});
 // no necesita fila de sub-pestañas propia.
 var CATEGORIAS = {
   agenda: ['agenda', 'pendientes'],
+  clientes: ['clientes'],
   precios: ['servicios', 'promos'],
   web: ['contenido'],
   ajustes: ['horarios', 'config']
@@ -458,6 +481,7 @@ function cambiarVista(v) {
   document.querySelectorAll('.nav-item').forEach(function (b) { b.classList.toggle('activo', b.dataset.cat === cat); });
   document.querySelectorAll('.sub-tabs').forEach(function (el) { el.classList.toggle('oculto', el.dataset.cat !== cat); });
   document.querySelectorAll('.sub-tab').forEach(function (b) { b.classList.toggle('activo', b.dataset.vista === v); });
+  if (v === 'clientes') cargarClientes();
 }
 // Desde el menú se entra siempre a la primera vista de la categoría.
 function irACategoria(cat) {
@@ -595,6 +619,153 @@ async function reagendar(reservaId) {
   var res = await llamarPost({ accion: 'reagendar_reserva', reserva_id: reservaId, fecha: fecha, hora: hora });
   if (!res.ok) { alert(res.error); return; }
   cargarReservas();
+}
+
+/* ------------------------- CLIENTES / HISTORIAL ------------------------- */
+function formatearFechaCorta(fechaStr) {
+  if (!fechaStr) return '';
+  var d = new Date(fechaStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return fechaStr;
+  return d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+// Deja solo dígitos y el "+" inicial, para armar links wa.me/tel: sin
+// importar cómo haya quedado tipeado el teléfono en la reserva.
+function limpiarTelefono(tel) {
+  return String(tel || '').trim().replace(/[^\d+]/g, '');
+}
+
+async function cargarClientes() {
+  var cont = document.getElementById('lista-clientes');
+  cont.innerHTML = 'Cargando...';
+  var res = await llamarGet({ accion: 'clientes_admin' });
+  if (!res.ok || !res.clientes) { cont.innerHTML = '<p>Error: ' + (res.error || 'no se pudo cargar el directorio') + '</p>'; return; }
+  cont.innerHTML = '';
+  if (!res.clientes.length) { cont.innerHTML = '<p style="color:var(--text-2);margin-top:14px;">Todavía no hay clientes — aparecen acá apenas exista una reserva.</p>'; return; }
+  res.clientes.forEach(function (c) { cont.appendChild(renderCliente(c)); });
+}
+
+function renderCliente(c) {
+  var telLimpio = limpiarTelefono(c.telefono);
+  var div = document.createElement('div');
+  div.className = 'reserva';
+  div.innerHTML =
+    '<div class="reserva-top">' +
+      '<div>' +
+        '<div class="reserva-nombre">' + c.nombre + '</div>' +
+        '<div class="reserva-detalle">' + c.telefono + '</div>' +
+        '<div class="reserva-detalle">' + c.totalSesiones + (c.totalSesiones === 1 ? ' sesión' : ' sesiones') +
+          (c.ultimaFecha ? ' · última: ' + formatearFechaCorta(c.ultimaFecha) : '') + '</div>' +
+        (c.proximaFecha ? '<div class="reserva-detalle">Próxima: ' + formatearFechaCorta(c.proximaFecha) + ' ' + c.proximaHora + '</div>' : '') +
+      '</div>' +
+    '</div>';
+
+  var acciones = document.createElement('div');
+  acciones.className = 'reserva-acciones';
+
+  var btnWpp = document.createElement('a');
+  btnWpp.className = 'btn btn-sm btn-whatsapp';
+  btnWpp.textContent = 'WhatsApp';
+  btnWpp.href = 'https://wa.me/' + telLimpio.replace(/^\+/, '');
+  btnWpp.target = '_blank';
+  btnWpp.rel = 'noopener';
+  acciones.appendChild(btnWpp);
+
+  var btnLlamar = document.createElement('a');
+  btnLlamar.className = 'btn btn-sm btn-ghost';
+  btnLlamar.textContent = 'Llamar';
+  btnLlamar.href = 'tel:' + telLimpio;
+  acciones.appendChild(btnLlamar);
+
+  var btnHistorial = boton('Ver historial', 'btn-ghost', function () { toggleHistorial(c); });
+  btnHistorial.id = 'btn-historial-' + telLimpio;
+  acciones.appendChild(btnHistorial);
+
+  div.appendChild(acciones);
+
+  var contHist = document.createElement('div');
+  contHist.className = 'historial-cont oculto';
+  contHist.id = 'historial-' + telLimpio;
+  div.appendChild(contHist);
+
+  return div;
+}
+
+async function toggleHistorial(c) {
+  var telLimpio = limpiarTelefono(c.telefono);
+  var cont = document.getElementById('historial-' + telLimpio);
+  var boton = document.getElementById('btn-historial-' + telLimpio);
+  if (!cont.classList.contains('oculto')) {
+    cont.classList.add('oculto');
+    boton.textContent = 'Ver historial';
+    return;
+  }
+  cont.classList.remove('oculto');
+  boton.textContent = 'Ocultar historial';
+  await pintarHistorial(c, cont);
+}
+
+async function pintarHistorial(c, cont) {
+  var telLimpio = limpiarTelefono(c.telefono);
+  cont.innerHTML = 'Cargando historial...';
+  var res = await llamarGet({ accion: 'historial_cliente', telefono: c.telefono });
+  cont.innerHTML = '';
+
+  if (res.ok && res.historial && res.historial.length) {
+    res.historial.forEach(function (h) {
+      var item = document.createElement('div');
+      item.className = 'historial-item';
+      item.innerHTML =
+        '<div class="historial-fecha">' + formatearFechaCorta(h.fecha) + '</div>' +
+        (h.diagnostico ? '<p><strong>Diagnóstico:</strong> ' + h.diagnostico + '</p>' : '') +
+        (h.tratamiento ? '<p><strong>Tratamiento:</strong> ' + h.tratamiento + '</p>' : '') +
+        (h.notas ? '<p><strong>Notas:</strong> ' + h.notas + '</p>' : '');
+      cont.appendChild(item);
+    });
+  } else {
+    var vacio = document.createElement('p');
+    vacio.className = 'historial-vacio';
+    vacio.textContent = 'Sin historial cargado todavía.';
+    cont.appendChild(vacio);
+  }
+
+  var form = document.createElement('div');
+  form.className = 'historial-form';
+  form.innerHTML =
+    '<label>Fecha de la sesión</label>' +
+    '<input type="date" id="hist-fecha-' + telLimpio + '" value="' + new Date().toISOString().slice(0, 10) + '">' +
+    '<label>Diagnóstico</label>' +
+    '<textarea id="hist-diag-' + telLimpio + '" placeholder="Qué observaste en esta sesión"></textarea>' +
+    '<label>Tratamiento</label>' +
+    '<textarea id="hist-trat-' + telLimpio + '" placeholder="Puntos tratados, técnicas usadas"></textarea>' +
+    '<label>Notas</label>' +
+    '<textarea id="hist-notas-' + telLimpio + '" placeholder="Evolución, recomendaciones, lo que sea útil para la próxima sesión"></textarea>' +
+    '<button class="btn btn-primary btn-sm" style="margin-top:8px;" type="button">+ Agregar al historial</button>' +
+    '<div class="msg oculto" id="hist-msg-' + telLimpio + '"></div>';
+  form.querySelector('button').onclick = function () { agregarHistorialCliente(c); };
+  cont.appendChild(form);
+}
+
+async function agregarHistorialCliente(c) {
+  var telLimpio = limpiarTelefono(c.telefono);
+  var fecha = document.getElementById('hist-fecha-' + telLimpio).value;
+  var diagnostico = document.getElementById('hist-diag-' + telLimpio).value.trim();
+  var tratamiento = document.getElementById('hist-trat-' + telLimpio).value.trim();
+  var notas = document.getElementById('hist-notas-' + telLimpio).value.trim();
+  var msg = document.getElementById('hist-msg-' + telLimpio);
+  if (!fecha) { alert('Poné la fecha de la sesión.'); return; }
+
+  var res = await llamarPost({
+    accion: 'agregar_historial', telefono: c.telefono, nombre: c.nombre,
+    fecha: fecha, diagnostico: diagnostico, tratamiento: tratamiento, notas: notas
+  });
+  if (!res.ok) {
+    msg.textContent = res.error || 'No se pudo guardar.';
+    msg.className = 'msg msg-error';
+    return;
+  }
+  var cont = document.getElementById('historial-' + telLimpio);
+  await pintarHistorial(c, cont);
 }
 
 /* ------------------------- CONFIGURACIÓN ------------------------- */
