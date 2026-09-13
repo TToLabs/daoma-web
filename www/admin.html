@@ -26,6 +26,7 @@
     --danger: #A6402F; --danger-soft: #FAEAE7;
     --ok: #2E7D46; --ok-soft: #E6F4EA;
     --warn: #B5793B; --warn-soft: #F5E9D8;
+    --info: #3E5C76; --info-soft: #E7EDF1;
     --shadow-sm: 0 1px 2px rgba(35,36,31,0.05);
     --r-card: 14px; --r-input: 10px; --r-btn: 12px;
   }
@@ -103,7 +104,10 @@
     font-size: 13px; font-weight: 600; color: var(--text-2);
     padding: 9px 4px; border-radius: 9px;
   }
-  .nav-item.activo { background: var(--primary); color: var(--primary-ink); }
+  .nav-item .ico-circulo { display: flex; align-items: center; justify-content: center; }
+  /* Activa en azul (--info), NO el verde --primary que ya usan botones y
+     tabs viejas — para que no se confunda con lo anterior a simple vista. */
+  .nav-item.activo { background: var(--info); color: #FFFFFF; }
   svg.ico { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 
   body.nativo .nav-categorias {
@@ -114,7 +118,8 @@
     box-shadow: 0 -2px 12px rgba(35,36,31,0.08);
   }
   body.nativo .nav-item { flex-direction: column; gap: 3px; font-size: 11.5px; color: var(--text-3); }
-  body.nativo .nav-item.activo { background: none; color: var(--primary); }
+  body.nativo .nav-item.activo { background: none; color: var(--info); }
+  body.nativo svg.ico { width: 22px; height: 22px; }
   body.nativo svg.ico { width: 22px; height: 22px; }
   body.nativo #panel { padding-bottom: 76px; }
 
@@ -206,19 +211,19 @@
        posición en el HTML es la que usa la versión web. -->
   <nav class="nav-categorias" role="tablist" aria-label="Secciones">
     <button class="nav-item activo" data-cat="agenda" type="button" onclick="irACategoria('agenda')">
-      <svg class="ico" aria-hidden="true"><use href="#i-calendario"/></svg>
+      <span class="ico-circulo"><svg class="ico" aria-hidden="true"><use href="#i-calendario"/></svg></span>
       Agenda
     </button>
     <button class="nav-item" data-cat="precios" type="button" onclick="irACategoria('precios')">
-      <svg class="ico" aria-hidden="true"><use href="#i-precio"/></svg>
+      <span class="ico-circulo"><svg class="ico" aria-hidden="true"><use href="#i-precio"/></svg></span>
       Precios
     </button>
     <button class="nav-item" data-cat="web" type="button" onclick="irACategoria('web')">
-      <svg class="ico" aria-hidden="true"><use href="#i-lista"/></svg>
+      <span class="ico-circulo"><svg class="ico" aria-hidden="true"><use href="#i-lista"/></svg></span>
       Web
     </button>
     <button class="nav-item" data-cat="ajustes" type="button" onclick="irACategoria('ajustes')">
-      <svg class="ico" aria-hidden="true"><use href="#i-ajustes"/></svg>
+      <span class="ico-circulo"><svg class="ico" aria-hidden="true"><use href="#i-ajustes"/></svg></span>
       Ajustes
     </button>
   </nav>
