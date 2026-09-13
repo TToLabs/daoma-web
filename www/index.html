@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DAOMA — Acupuntura Integral</title>
+<meta name="description" content="Agenda tu sesión de acupuntura en clínica o a domicilio. Reserva y asegura tu cupo online.">
+<meta name="apple-mobile-web-app-title" content="DAOMA">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#2E4034">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F5F3EE;
+    --surface: #FFFFFF;
+    --surface-2: #F1EEE6;
+    --border: #E3DDD0;
+    --border-strong: #CFC6B2;
+    --text: #23241F;
+    --text-2: #5C5A4E;
+    --text-3: #8C8977;
+    --primary: #2E4034;
+    --primary-hover: #22302A;
+    --primary-ink: #FFFFFF;
+    --primary-soft: #E7ECE6;
+    --primary-soft-ink: #2E4034;
+    --accent: #B5793B;
+    --accent-soft: #F5E9D8;
+    --danger: #A6402F;
+    --danger-soft: #FAEAE7;
+    --shadow-sm: 0 1px 2px rgba(35,36,31,0.05);
+    --shadow-md: 0 1px 2px rgba(35,36,31,0.04), 0 6px 16px rgba(35,36,31,0.08);
+    --r-card: 14px; --r-input: 10px; --r-btn: 12px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    color: var(--text); font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+    font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+    min-height: 100vh; display: flex; justify-content: center;
+    padding: 0 16px calc(40px + env(safe-area-inset-bottom));
+    background-color: var(--bg);
+    /* Rama de ginkgo + marco + montañas, papel envejecido. cover
+       ajusta la imagen para llenar siempre toda la pantalla, en vez de
+       quedar chica en una esquina. El contenido se lee arriba gracias
+       al módulo flotante semitransparente con blur de .app.
+       position:bottom para que se vea el pie de la ilustración (el
+       pabellón y las montañas), no solo el centro vacío. */
+    background-image: url("img/fondo-index.jpg");
+    background-size: cover;
+    background-position: bottom;
+    background-repeat: no-repeat;
+    background-blend-mode: multiply;
+  }
+  @media (min-width: 700px) {
+    /* fixed da un efecto lindo de que la ilustración queda quieta
+       mientras la página hace scroll, pero es poco confiable en
+       mobile Safari — se activa solo en escritorio/tablet. */
+    body { background-attachment: fixed; }
+  }
+  .app {
+    width: 100%; max-width: 480px;
+    background: rgba(255, 253, 248, 0.86);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(220, 201, 160, 0.35);
+    border-radius: 22px;
+    padding: 4px 18px 24px;
+    box-shadow: 0 10px 30px rgba(43, 36, 26, 0.12);
+    margin: 16px 0;
+  }
+  .topbar { padding: calc(20px + env(safe-area-inset-top)) 0 8px; }
+  .brand-name { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; color: var(--primary); }
+  .brand-sub { font-size: 14px; color: var(--text-3); margin-top: 2px; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); box-shadow: var(--shadow-sm); padding: 18px; margin-top: 16px; }
+  .card h2 { margin: 0 0 4px; font-size: 17px; }
+  .card p.hint { margin: 0 0 12px; color: var(--text-2); font-size: 14px; }
+
+  .promo { background: var(--accent-soft); border: 1px solid #E3C79C; border-radius: var(--r-card); padding: 14px 16px; margin-top: 14px; }
+  .promo-title { font-weight: 600; color: #7A4E1F; font-size: 15px; }
+  .promo-price { font-size: 20px; font-weight: 700; color: var(--text); margin-top: 2px; }
+  .promo-old { text-decoration: line-through; color: var(--text-3); font-size: 14px; margin-left: 6px; font-weight: 400; }
+
+  .tabs { display: flex; gap: 8px; margin-top: 16px; }
+  .tab { flex: 1; padding: 10px; text-align: center; border-radius: var(--r-btn); border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-weight: 600; font-size: 14.5px; color: var(--text-2); }
+  .tab.activo { background: var(--primary); color: var(--primary-ink); border-color: var(--primary); }
+
+  label { display: block; font-size: 13.5px; font-weight: 600; color: var(--text-2); margin: 14px 0 6px; }
+  input, select, textarea {
+    width: 100%; padding: 11px 12px; border-radius: var(--r-input); border: 1px solid var(--border);
+    background: var(--surface); color: var(--text); font: inherit; font-size: 16px;
+  }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary); outline-offset: 1px; border-color: var(--primary); }
+  textarea { resize: vertical; min-height: 60px; }
+
+  .servicios { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+  .servicio-opt { display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid var(--border); border-radius: var(--r-btn); cursor: pointer; }
+  .servicio-opt.sel { border-color: var(--primary); background: var(--primary-soft); }
+  .servicio-opt .precio { font-weight: 700; }
+
+  .slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+  .slot { padding: 10px 4px; text-align: center; border: 1px solid var(--border); border-radius: var(--r-btn); cursor: pointer; font-size: 14.5px; font-weight: 600; background: var(--surface); }
+  .slot.sel { background: var(--primary); color: var(--primary-ink); border-color: var(--primary); }
+  .dia-label { font-weight: 600; margin-top: 14px; font-size: 14.5px; color: var(--text-2); }
+
+  .pago-opt { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: var(--r-btn); margin-top: 8px; cursor: pointer; }
+  .pago-opt.sel { border-color: var(--primary); background: var(--primary-soft); }
+
+  .aviso-sena { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-btn); padding: 12px; font-size: 13.5px; color: var(--text-2); margin-top: 14px; }
+  .check-row { display: flex; align-items: flex-start; gap: 10px; margin-top: 12px; }
+  .check-row input { width: 18px; height: 18px; margin-top: 2px; flex: none; }
+  .check-row span { font-size: 13.5px; color: var(--text-2); }
+
+  .btn { width: 100%; padding: 14px; border-radius: var(--r-btn); border: none; font: inherit; font-weight: 700; font-size: 16px; cursor: pointer; margin-top: 18px; }
+  .btn-primary { background: var(--primary); color: var(--primary-ink); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-ghost { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+
+  .resultado { text-align: center; padding: 8px 0; }
+  .resultado .ico-ok { font-size: 40px; }
+  .resultado h2 { margin: 10px 0 4px; }
+  .resultado .monto { font-size: 28px; font-weight: 700; color: var(--primary); margin: 10px 0; }
+  .datos-bancarios { background: var(--surface-2); border-radius: var(--r-btn); padding: 14px; margin-top: 14px; text-align: left; font-size: 14.5px; line-height: 1.7; }
+
+  .msg-error { background: var(--danger-soft); color: var(--danger); border-radius: var(--r-btn); padding: 10px 12px; font-size: 14px; margin-top: 12px; }
+  .oculto { display: none !important; }
+
+  /* ---------- Info sobre acupuntura ---------- */
+  .info-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); box-shadow: var(--shadow-sm); margin-top: 16px; overflow: hidden; }
+  .info-toggle { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 16px 18px; background: none; border: none; cursor: pointer; font: inherit; text-align: left; }
+  .info-toggle h2 { margin: 0; font-size: 16px; }
+  .info-toggle .chev { transition: transform 0.2s; color: var(--text-3); }
+  .info-toggle.abierto .chev { transform: rotate(180deg); }
+  .info-body { max-height: 0; overflow: hidden; transition: max-height 0.25s ease; }
+  .info-body.abierto { max-height: 2000px; }
+  .info-body-inner { padding: 0 18px 18px; }
+  .info-body-inner p { margin: 0 0 10px; color: var(--text-2); font-size: 14.5px; line-height: 1.6; }
+  .beneficios-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+  .beneficio-item { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; font-size: 13.5px; color: var(--text); }
+  .terapia-item { border-top: 1px solid var(--border); padding: 12px 0; }
+  .terapia-item:first-child { border-top: none; padding-top: 4px; }
+  .terapia-item h3 { margin: 0 0 4px; font-size: 15px; }
+  .terapia-item p { margin: 0; font-size: 13.5px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand-name">DAOMA</div>
+    <div class="brand-sub">Acupuntura Integral</div>
+  </div>
+
+  <!-- INFO: contenido editable desde admin.html > Contenido -->
+  <div id="info-cards"></div>
+
+  <!-- PROMOCIONES -->
+  <div id="promos"></div>
+
+  <!-- PASO 1: modalidad -->
+  <div class="card" id="paso-modalidad">
+    <h2>Agenda tu sesión</h2>
+    <p class="hint">Elige dónde te atiendes.</p>
+    <div class="tabs">
+      <div class="tab activo" data-tipo="CLINICA" onclick="elegirTipo('CLINICA')">En clínica</div>
+      <div class="tab" data-tipo="DOMICILIO" onclick="elegirTipo('DOMICILIO')">A domicilio</div>
+    </div>
+
+    <div id="bloque-domicilio" class="oculto">
+      <label>Dirección</label>
+      <input type="text" id="direccion" placeholder="Calle y número">
+      <label>Comuna</label>
+      <input type="text" id="comuna" placeholder="Ej: Providencia">
+    </div>
+
+    <label>Servicio</label>
+    <div class="servicios" id="lista-servicios"></div>
+  </div>
+
+  <!-- PASO 2: horario -->
+  <div class="card oculto" id="paso-horario">
+    <h2>Elige día y hora</h2>
+    <p class="hint" id="hint-horario">Cupos reales de clínica, se actualizan al instante.</p>
+    <div id="calendario"></div>
+  </div>
+
+  <!-- PASO 3: datos y pago -->
+  <div class="card oculto" id="paso-datos">
+    <h2>Tus datos</h2>
+    <label>Nombre completo</label>
+    <input type="text" id="nombre">
+    <label>Teléfono (WhatsApp)</label>
+    <input type="tel" id="telefono" placeholder="+56 9 ...">
+    <label>Email (opcional)</label>
+    <input type="email" id="email">
+
+    <div id="bloque-pago-completo-domicilio" class="oculto">
+      <p class="hint" style="margin-top:14px;">Tu solicitud queda pendiente hasta que el acupunturista confirme el horario. Ahí te pedimos el pago.</p>
+    </div>
+
+    <div id="bloque-pago" class="oculto">
+      <label>¿Cómo pagas?</label>
+      <div class="pago-opt sel" id="opt-sena" onclick="elegirPago(false)">
+        <input type="radio" name="pago" checked style="pointer-events:none;">
+        <div>
+          <div style="font-weight:600;">Pagar solo la seña</div>
+          <div style="font-size:13px;color:var(--text-2);">Asegura tu cupo ahora</div>
+        </div>
+      </div>
+      <div class="pago-opt" id="opt-completo" onclick="elegirPago(true)">
+        <input type="radio" name="pago" style="pointer-events:none;">
+        <div>
+          <div style="font-weight:600;">Pagar completo</div>
+          <div style="font-size:13px;color:var(--text-2);">Sin saldo pendiente el día de la sesión</div>
+        </div>
+      </div>
+
+      <div class="aviso-sena" id="texto-sena"></div>
+
+      <div class="check-row">
+        <input type="checkbox" id="acepta-sena">
+        <span>Entiendo y acepto las condiciones de la seña.</span>
+      </div>
+    </div>
+
+    <div id="error-datos" class="msg-error oculto"></div>
+    <button class="btn btn-primary" id="btn-confirmar" onclick="confirmarReserva()">Confirmar reserva</button>
+  </div>
+
+  <!-- RESULTADO -->
+  <div class="card oculto" id="paso-resultado">
+    <div class="resultado">
+      <div class="ico-ok">✅</div>
+      <h2 id="resultado-titulo">Reserva creada</h2>
+      <p id="resultado-sub" class="hint"></p>
+      <div class="monto" id="resultado-monto"></div>
+      <div class="datos-bancarios oculto" id="datos-bancarios"></div>
+    </div>
+    <button class="btn btn-ghost" onclick="location.reload()">Hacer otra reserva</button>
+  </div>
+</div>
+
+<script>
+// ========================================================================
+// CONFIGURACIÓN — pegar acá la URL de Apps Script publicada (Paso 4 de
+// INSTRUCCIONES.md), mismo patrón que Rumbo.
+// ========================================================================
+var API_URL = "https://script.google.com/macros/s/AKfycbxRnyIk695jw8lTVtMVZsqYi-7vI9dYR4PmDpcN0mzdRo1CamEjfy4u4F8ReBLrP8xX/exec";
+
+function toggleInfo(btn, idContenido) {
+  var body = document.getElementById(idContenido);
+  var abrir = !body.classList.contains('abierto');
+  document.querySelectorAll('.info-body.abierto').forEach(function (b) { b.classList.remove('abierto'); });
+  document.querySelectorAll('.info-toggle.abierto').forEach(function (b) { b.classList.remove('abierto'); });
+  if (abrir) { body.classList.add('abierto'); btn.classList.add('abierto'); }
+}
+
+var estado = {
+  tipo: 'CLINICA',
+  servicioId: null,
+  fecha: null,
+  hora: null,
+  fechaSolicitada: null,
+  horaSolicitada: null,
+  pagaCompleto: false,
+  config: null,
+  precioActual: 0
+};
+
+async function llamarGet(params) {
+  var qs = new URLSearchParams(params).toString();
+  var r = await fetch(API_URL + '?' + qs);
+  return r.json();
+}
+async function llamarPost(body) {
+  var r = await fetch(API_URL, { method: 'POST', body: JSON.stringify(body) });
+  return r.json();
+}
+
+async function iniciar() {
+  var res = await llamarGet({ accion: 'config_publica' });
+  if (!res.ok) { alert('No se pudo cargar la app: ' + res.error); return; }
+  estado.config = res.config;
+  pintarInfo();
+  pintarPromos();
+  pintarServicios();
+  document.getElementById('texto-sena').textContent = res.config.textoSena;
+}
+
+function pintarInfo() {
+  var info = estado.config.contenidoInfo;
+  var cont = document.getElementById('info-cards');
+  cont.innerHTML = '';
+  if (!info) return;
+
+  if (info.queEs) {
+    cont.appendChild(crearInfoCard('¿Qué es la acupuntura?', 'info-que-es',
+      info.queEs.split('\n').filter(Boolean).map(function (p) { return '<p>' + p + '</p>'; }).join('')));
+  }
+  if (info.beneficios && info.beneficios.length) {
+    var grid = '<div class="beneficios-grid">' +
+      info.beneficios.map(function (b) { return '<div class="beneficio-item">' + b + '</div>'; }).join('') +
+      '</div>';
+    var aviso = info.avisoBeneficios ? '<p style="font-size:12.5px;color:var(--text-3);">' + info.avisoBeneficios + '</p>' : '';
+    cont.appendChild(crearInfoCard('Beneficios', 'info-beneficios', grid + aviso));
+  }
+  if (info.terapias && info.terapias.length) {
+    var lista = info.terapias.map(function (t, i) {
+      return '<div class="terapia-item"' + (i === 0 ? ' style="border-top:none;padding-top:4px;"' : '') + '>' +
+        '<h3>' + t.nombre + '</h3><p>' + t.descripcion + '</p></div>';
+    }).join('');
+    cont.appendChild(crearInfoCard('Terapias que ofrecemos', 'info-terapias', lista));
+  }
+}
+
+function crearInfoCard(titulo, id, contenidoHtml) {
+  var card = document.createElement('div');
+  card.className = 'info-card';
+  card.innerHTML =
+    '<button class="info-toggle" onclick="toggleInfo(this, \'' + id + '\')">' +
+      '<h2>' + titulo + '</h2><span class="chev">▾</span>' +
+    '</button>' +
+    '<div class="info-body" id="' + id + '"><div class="info-body-inner">' + contenidoHtml + '</div></div>';
+  return card;
+}
+
+function pintarPromos() {
+  var cont = document.getElementById('promos');
+  cont.innerHTML = '';
+  (estado.config.promociones || []).forEach(function (p) {
+    var div = document.createElement('div');
+    div.className = 'promo';
+    div.innerHTML = '<div class="promo-title">' + p.nombre + '</div>' +
+      '<div class="promo-price">$' + p.precioTotal.toLocaleString('es-CL') + '</div>';
+    cont.appendChild(div);
+  });
+}
+
+function pintarServicios() {
+  var cont = document.getElementById('lista-servicios');
+  cont.innerHTML = '';
+  estado.config.servicios.forEach(function (s) {
+    var precio = estado.tipo === 'DOMICILIO' ? s.precioDomicilio : s.precioClinica;
+    var div = document.createElement('div');
+    div.className = 'servicio-opt' + (estado.servicioId === s.id ? ' sel' : '');
+    div.innerHTML = '<span>' + s.nombre + '</span><span class="precio">$' + precio.toLocaleString('es-CL') + '</span>';
+    div.onclick = function () { estado.servicioId = s.id; pintarServicios(); mostrarPasoSiguiente(); };
+    cont.appendChild(div);
+  });
+}
+
+function elegirTipo(tipo) {
+  estado.tipo = tipo;
+  document.querySelectorAll('.tab').forEach(function (t) { t.classList.toggle('activo', t.dataset.tipo === tipo); });
+  document.getElementById('bloque-domicilio').classList.toggle('oculto', tipo !== 'DOMICILIO');
+  pintarServicios();
+}
+
+function mostrarPasoSiguiente() {
+  if (!estado.servicioId) return;
+  if (estado.tipo === 'DOMICILIO') {
+    document.getElementById('paso-horario').classList.add('oculto');
+    mostrarPasoDatos();
+  } else {
+    document.getElementById('paso-horario').classList.remove('oculto');
+    cargarCupos();
+  }
+}
+
+async function cargarCupos() {
+  var cal = document.getElementById('calendario');
+  cal.innerHTML = 'Cargando cupos...';
+  var res = await llamarGet({ accion: 'cupos_disponibles' });
+  if (!res.ok) { cal.innerHTML = 'No se pudieron cargar los cupos.'; return; }
+  if (!res.dias.length) { cal.innerHTML = '<p class="hint">No hay cupos disponibles en los próximos días. Escríbenos por Instagram.</p>'; return; }
+  cal.innerHTML = '';
+  res.dias.forEach(function (dia) {
+    var label = document.createElement('div');
+    label.className = 'dia-label';
+    label.textContent = formatearFecha(dia.fecha);
+    cal.appendChild(label);
+    var grid = document.createElement('div');
+    grid.className = 'slots';
+    dia.slots.forEach(function (hora) {
+      var el = document.createElement('div');
+      el.className = 'slot';
+      el.textContent = hora;
+      el.onclick = function () {
+        estado.fecha = dia.fecha; estado.hora = hora;
+        document.querySelectorAll('.slot').forEach(function (s) { s.classList.remove('sel'); });
+        el.classList.add('sel');
+        mostrarPasoDatos();
+      };
+      grid.appendChild(el);
+    });
+    cal.appendChild(grid);
+  });
+}
+
+function formatearFecha(fechaStr) {
+  var d = new Date(fechaStr + 'T00:00:00');
+  return d.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+function mostrarPasoDatos() {
+  document.getElementById('paso-datos').classList.remove('oculto');
+  document.getElementById('bloque-pago').classList.toggle('oculto', estado.tipo === 'DOMICILIO');
+  document.getElementById('bloque-pago-completo-domicilio').classList.toggle('oculto', estado.tipo !== 'DOMICILIO');
+}
+
+function elegirPago(completo) {
+  estado.pagaCompleto = completo;
+  document.getElementById('opt-sena').classList.toggle('sel', !completo);
+  document.getElementById('opt-completo').classList.toggle('sel', completo);
+}
+
+async function confirmarReserva() {
+  var nombre = document.getElementById('nombre').value.trim();
+  var telefono = document.getElementById('telefono').value.trim();
+  var email = document.getElementById('email').value.trim();
+  var errorDiv = document.getElementById('error-datos');
+  errorDiv.classList.add('oculto');
+
+  if (!nombre || !telefono) { mostrarError('Falta tu nombre o teléfono.'); return; }
+  if (estado.tipo === 'CLINICA' && !document.getElementById('acepta-sena').checked) {
+    mostrarError('Tenés que aceptar las condiciones de la seña.'); return;
+  }
+
+  var btn = document.getElementById('btn-confirmar');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+
+  var res;
+  if (estado.tipo === 'CLINICA') {
+    res = await llamarPost({
+      accion: 'crear_reserva_clinica',
+      nombre: nombre, telefono: telefono, email: email,
+      fecha: estado.fecha, hora: estado.hora, servicio_id: estado.servicioId,
+      paga_completo: estado.pagaCompleto, acepta_terminos_sena: true
+    });
+  } else {
+    var direccion = document.getElementById('direccion').value.trim();
+    var comuna = document.getElementById('comuna').value.trim();
+    if (!direccion || !comuna) { mostrarError('Falta la dirección o la comuna.'); btn.disabled = false; btn.textContent = 'Confirmar reserva'; return; }
+    res = await llamarPost({
+      accion: 'crear_solicitud_domicilio',
+      nombre: nombre, telefono: telefono, email: email,
+      direccion: direccion, comuna: comuna,
+      fecha_solicitada: '', hora_solicitada: '', servicio_id: estado.servicioId,
+      acepta_terminos_sena: true
+    });
+  }
+
+  btn.disabled = false; btn.textContent = 'Confirmar reserva';
+  if (!res.ok) { mostrarError(res.error || 'No se pudo crear la reserva.'); return; }
+
+  mostrarResultado(res);
+}
+
+function mostrarError(msg) {
+  var errorDiv = document.getElementById('error-datos');
+  errorDiv.textContent = msg;
+  errorDiv.classList.remove('oculto');
+}
+
+function mostrarResultado(res) {
+  document.getElementById('paso-modalidad').classList.add('oculto');
+  document.getElementById('paso-horario').classList.add('oculto');
+  document.getElementById('paso-datos').classList.add('oculto');
+  document.getElementById('paso-resultado').classList.remove('oculto');
+
+  if (estado.tipo === 'DOMICILIO') {
+    document.getElementById('resultado-titulo').textContent = 'Solicitud enviada';
+    document.getElementById('resultado-sub').textContent = 'El acupunturista va a confirmar el horario a la brevedad. Te contactaremos por teléfono.';
+    document.getElementById('resultado-monto').textContent = '';
+  } else {
+    document.getElementById('resultado-titulo').textContent = 'Reserva creada';
+    document.getElementById('resultado-sub').textContent = 'Transfiere el monto en los próximos ' + res.vence_en_minutos + ' minutos para asegurar tu cupo.';
+    document.getElementById('resultado-monto').textContent = '$' + res.monto_sena.toLocaleString('es-CL');
+    var db = estado.config.datosBancarios;
+    var cont = document.getElementById('datos-bancarios');
+    cont.classList.remove('oculto');
+    cont.innerHTML = '<b>Datos para transferir</b><br>' +
+      'Banco: ' + (db.banco || '-') + '<br>' +
+      'Cuenta ' + (db.tipoCuenta || '-') + ': ' + (db.numeroCuenta || '-') + '<br>' +
+      'RUT: ' + (db.rut || '-') + '<br>' +
+      'Nombre: ' + (db.nombre || '-') + '<br>' +
+      'Email: ' + (db.email || '-');
+  }
+}
+
+iniciar();
+</script>
+</body>
+</html>

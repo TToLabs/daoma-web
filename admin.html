@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DAOMA Panel — Descargas</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#2E4034">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F5F3EE; --surface: #FFFFFF; --surface-2: #F1EEE6;
+    --border: #E3DDD0; --border-strong: #CFC6B2;
+    --text: #23241F; --text-2: #5C5A4E; --text-3: #8C8977;
+    --primary: #2E4034; --primary-hover: #22302A; --primary-ink: #FFFFFF;
+    --shadow-sm: 0 1px 2px rgba(35,36,31,0.05);
+    --r-card: 16px; --r-btn: 12px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); }
+  body {
+    color: var(--text); font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-size: 17px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+    display: flex; justify-content: center;
+    padding: 0 16px calc(48px + env(safe-area-inset-bottom));
+  }
+  .app { width: 100%; max-width: 480px; }
+  header { padding: calc(20px + env(safe-area-inset-top)) 0 8px; }
+  header .brand-name { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; color: var(--primary); }
+  header .brand-sub { font-size: 14px; color: var(--text-3); margin-top: 2px; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card);
+    padding: 22px; margin: 20px 0 16px; box-shadow: var(--shadow-sm);
+  }
+  .card h2 { margin: 0 0 4px; font-size: 19px; font-weight: 700; }
+  .card p.desc { margin: 0 0 18px; color: var(--text-2); font-size: 15px; line-height: 1.45; }
+  .botones { display: flex; flex-direction: column; gap: 10px; }
+  .btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 13px 16px; border-radius: var(--r-btn); font-weight: 600; font-size: 15px;
+    text-decoration: none; border: 1px solid transparent; cursor: pointer;
+  }
+  .btn-primario { background: var(--primary); color: var(--primary-ink); }
+  .btn-primario:hover { background: var(--primary-hover); }
+  .btn-secundario { background: var(--surface-2); color: var(--text); border-color: var(--border); }
+  .btn-secundario:hover { border-color: var(--border-strong); }
+
+  .nota-instalar {
+    margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: var(--surface-2);
+    font-size: 13.5px; color: var(--text-2); line-height: 1.5;
+  }
+  .respaldo { font-size: 13.5px; color: var(--text-3); text-align: center; margin-top: 8px; line-height: 1.5; }
+  footer { text-align: center; color: var(--text-3); font-size: 12.5px; margin-top: 28px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="brand-name">DAOMA · Panel</div>
+    <div class="brand-sub">Acupuntura Integral</div>
+  </header>
+
+  <section class="card">
+    <h2>Descargá tu panel</h2>
+    <p class="desc">Gestioná tu agenda, horarios, servicios y contenido de la web. Necesitás tu usuario y contraseña.</p>
+    <div class="botones">
+      <a class="btn btn-primario" href="www/admin.html">Usar la web ahora</a>
+      <a class="btn btn-secundario" id="linkApkAdmin" href="#">Descargar app Android (.apk)</a>
+    </div>
+    <div class="nota-instalar">
+      Android va a pedirte activar <strong>"Instalar apps de fuentes desconocidas"</strong> la primera vez.
+    </div>
+  </section>
+
+  <p class="respaldo">
+    ¿La app falla o no abre? Usá el link de "web ahora" de arriba — funciona
+    igual desde el navegador del teléfono, sin instalar nada.
+  </p>
+
+  <footer>
+    Este link es solo para el acupunturista — no lo compartas con pacientes.
+  </footer>
+</div>
+<script>
+  var BASE_RELEASE = "https://github.com/mercadateapp/daoma-web/releases/download/latest/";
+  document.getElementById("linkApkAdmin").href = BASE_RELEASE + "daoma-admin.apk";
+</script>
+</body>
+</html>
