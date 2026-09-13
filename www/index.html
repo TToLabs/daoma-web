@@ -146,6 +146,21 @@
   .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
   .btn-ghost { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
 
+  .app-download {
+    display: flex; align-items: center; gap: 12px; margin-top: 28px; padding: 16px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card);
+    box-shadow: var(--shadow-sm);
+  }
+  .app-download img { width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0; }
+  .app-download-texto { flex: 1; min-width: 0; }
+  .app-download-titulo { font-weight: 700; font-size: 14.5px; }
+  .app-download-sub { font-size: 12.5px; color: var(--text-3); margin-top: 1px; }
+  .app-download-btn {
+    flex-shrink: 0; padding: 9px 14px; border-radius: var(--r-btn); font-weight: 700; font-size: 13.5px;
+    background: var(--primary); color: var(--primary-ink); text-decoration: none;
+  }
+  .footer-legal { text-align: center; color: var(--text-3); font-size: 12px; margin: 20px 0 4px; }
+
   .resultado { text-align: center; padding: 8px 0; }
   .resultado .ico-ok { font-size: 40px; }
   .resultado h2 { margin: 10px 0 4px; }
@@ -293,6 +308,17 @@
     </div>
     <button class="btn btn-ghost" onclick="location.reload()">Hacer otra reserva</button>
   </div>
+
+  <!-- DESCARGA DE APP -->
+  <div class="app-download">
+    <img src="img/icon-paciente.png" alt="">
+    <div class="app-download-texto">
+      <div class="app-download-sub">Descargala para tu teléfono Android</div>
+    </div>
+    <a class="app-download-btn" id="link-apk-paciente" href="#">Descargar</a>
+  </div>
+
+  <footer class="footer-legal">© 2026 DAOMA. Todos los derechos reservados.</footer>
 </div>
 
 <script>
@@ -332,6 +358,8 @@ async function iniciar() {
   pintarPromos();
   pintarServicios();
   document.getElementById('texto-sena').textContent = res.config.textoSena;
+  document.getElementById('link-apk-paciente').href =
+    'https://github.com/mercadateapp/daoma-web/releases/download/latest/daoma-paciente.apk';
 }
 
 function pintarInfo() {
