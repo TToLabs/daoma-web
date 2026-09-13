@@ -3,8 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>DAOMA — Panel</title>
+<title>DAOMA · Agenda de Turnos</title>
 <meta name="robots" content="noindex, nofollow">
+<meta name="apple-mobile-web-app-title" content="DAOMA Agenda de Turnos">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#2E4034">
+<link rel="manifest" href="manifest-admin.json">
+<link rel="icon" href="img/icon-admin.png">
+<link rel="apple-touch-icon" href="img/icon-admin.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -31,9 +38,9 @@
        ajusta la imagen a la ventana completa, cualquiera sea su
        tamaño (a diferencia de un tamaño fijo en la esquina). El
        contenido se lee arriba gracias al módulo flotante con blur. */
-    background-image: url("img/fondo-admin.jpg");
+    background-image: url("img/fondo-index.jpg");
     background-size: cover;
-    background-position: center;
+    background-position: bottom;
     background-repeat: no-repeat;
     background-blend-mode: multiply;
   }
@@ -104,6 +111,8 @@
 
   .oculto { display: none !important; }
   .login-wrap { max-width: 320px; margin: 80px auto; padding: 28px 24px; text-align: center; }
+  .login-logo { width: 64px; height: 64px; margin: 0 auto 10px; display: block; }
+  .topbar .brand-logo { width: 32px; height: 32px; }
   .msg { border-radius: var(--r-btn); padding: 10px 12px; font-size: 14px; margin-top: 10px; }
   .msg-error { background: var(--danger-soft); color: var(--danger); }
   .msg-ok { background: var(--ok-soft); color: var(--ok); }
@@ -131,19 +140,23 @@
 
 <!-- LOGIN -->
 <div class="login-wrap" id="login-wrap">
-  <h2>DAOMA · Panel</h2>
+  <img class="login-logo" src="img/logo.png" alt="">
+  <h2>DAOMA · Agenda de Turnos</h2>
   <label>Usuario</label>
-  <input type="text" id="usuario-input" autocapitalize="off" autocomplete="username">
+  <input type="text" id="usuario-input" autocapitalize="off" autocomplete="username" onkeydown="if(event.key==='Enter') login()">
   <label>Contraseña</label>
-  <input type="password" id="pin-input" autocomplete="current-password">
-  <button class="btn btn-primary btn-block" onclick="login()">Entrar</button>
+  <input type="password" id="pin-input" autocomplete="current-password" onkeydown="if(event.key==='Enter') login()">
+  <button class="btn btn-primary btn-block" id="login-btn" onclick="login()">Entrar</button>
   <div id="login-error" class="msg msg-error oculto"></div>
 </div>
 
 <!-- PANEL -->
 <div class="app oculto" id="panel">
   <div class="topbar">
-    <div class="brand">DAOMA · Panel</div>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <img class="brand-logo" src="img/logo.png" alt="">
+      <div class="brand">DAOMA · Agenda de Turnos</div>
+    </div>
     <div class="badge-pin" onclick="cerrarSesion()">Cerrar sesión</div>
   </div>
 
@@ -209,7 +222,7 @@
   <!-- CONTENIDO -->
   <div class="vista" id="vista-contenido">
     <div class="card">
-      <h2>¿Qué es la acupuntura?</h2>
+      <h2>Qué es la acupuntura</h2>
       <p style="color:var(--text-2);font-size:13.5px;margin:0 0 8px;">Este texto lo ve todo paciente antes de reservar. Un párrafo por línea.</p>
       <textarea id="info-que-es" style="min-height:140px;" oninput="actualizarVistaPrevia()"></textarea>
     </div>
@@ -311,12 +324,21 @@ async function entrarConCredenciales() {
 }
 
 async function login() {
+  var boton = document.getElementById('login-btn');
+  var textoOriginal = boton.textContent;
+  boton.disabled = true;
+  boton.textContent = 'Entrando...';
+  document.getElementById('login-error').classList.add('oculto');
+
   USUARIO = document.getElementById('usuario-input').value.trim();
   PIN = document.getElementById('pin-input').value.trim();
   var res = await entrarConCredenciales();
+
   if (!res.ok) {
     document.getElementById('login-error').textContent = res.error || 'Usuario o contraseña inválidos';
     document.getElementById('login-error').classList.remove('oculto');
+    boton.disabled = false;
+    boton.textContent = textoOriginal;
   }
 }
 
@@ -651,7 +673,7 @@ function actualizarVistaPrevia() {
   cont.innerHTML = '';
 
   if (queEs.trim()) {
-    cont.appendChild(crearPreviewCard('¿Qué es la acupuntura?',
+    cont.appendChild(crearPreviewCard('Qué es la acupuntura',
       queEs.split('\n').filter(Boolean).map(function (p) { return '<p>' + p + '</p>'; }).join('')));
   }
   if (info.beneficios.length) {

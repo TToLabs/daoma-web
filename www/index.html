@@ -5,10 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>DAOMA — Acupuntura Integral</title>
 <meta name="description" content="Agenda tu sesión de acupuntura en clínica o a domicilio. Reserva y asegura tu cupo online.">
-<meta name="apple-mobile-web-app-title" content="DAOMA">
+<meta name="apple-mobile-web-app-title" content="DAOMA Acupuntura">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#2E4034">
+<link rel="manifest" href="manifest-paciente.json">
+<link rel="icon" href="img/icon-paciente.png">
+<link rel="apple-touch-icon" href="img/icon-paciente.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -72,7 +75,8 @@
     box-shadow: 0 10px 30px rgba(43, 36, 26, 0.12);
     margin: 16px 0;
   }
-  .topbar { padding: calc(20px + env(safe-area-inset-top)) 0 8px; }
+  .topbar { padding: calc(20px + env(safe-area-inset-top)) 0 8px; display: flex; align-items: center; gap: 12px; }
+  .brand-logo { width: 46px; height: 46px; flex-shrink: 0; }
   .brand-name { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; color: var(--primary); }
   .brand-sub { font-size: 14px; color: var(--text-3); margin-top: 2px; }
 
@@ -107,6 +111,28 @@
   .slot.sel { background: var(--primary); color: var(--primary-ink); border-color: var(--primary); }
   .dia-label { font-weight: 600; margin-top: 14px; font-size: 14.5px; color: var(--text-2); }
 
+  .cal-wrap { margin-top: 8px; }
+  .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .cal-mes { font-weight: 700; font-size: 15px; text-transform: capitalize; }
+  .cal-nav {
+    width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface);
+    font-size: 17px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text);
+  }
+  .cal-nav:hover { border-color: var(--border-strong); }
+  .cal-nav:disabled { opacity: 0.3; cursor: default; }
+  .cal-dow { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 12px; color: var(--text-3); margin-bottom: 4px; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-day {
+    aspect-ratio: 1; display: flex; align-items: center; justify-content: center; position: relative;
+    border-radius: 10px; font-size: 13.5px; color: var(--text);
+  }
+  .cal-day.vacio { visibility: hidden; }
+  .cal-day.pasado, .cal-day.sin-cupos { color: var(--text-3); }
+  .cal-day.disponible { background: var(--accent-soft); font-weight: 700; cursor: pointer; }
+  .cal-day.disponible:hover { background: #ecdbb8; }
+  .cal-day.sel { background: var(--primary); color: var(--primary-ink); font-weight: 700; }
+  #slots-dia .dia-label { margin-top: 16px; }
+
   .pago-opt { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: var(--r-btn); margin-top: 8px; cursor: pointer; }
   .pago-opt.sel { border-color: var(--primary); background: var(--primary-soft); }
 
@@ -131,18 +157,32 @@
 
   /* ---------- Info sobre acupuntura ---------- */
   .info-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); box-shadow: var(--shadow-sm); margin-top: 16px; overflow: hidden; }
-  .info-toggle { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 16px 18px; background: none; border: none; cursor: pointer; font: inherit; text-align: left; }
+  .info-toggle { width: 100%; padding: 16px 18px 4px; font: inherit; text-align: left; }
   .info-toggle h2 { margin: 0; font-size: 16px; }
-  .info-toggle .chev { transition: transform 0.2s; color: var(--text-3); }
-  .info-toggle.abierto .chev { transform: rotate(180deg); }
-  .info-body { max-height: 0; overflow: hidden; transition: max-height 0.25s ease; }
-  .info-body.abierto { max-height: 2000px; }
+  .info-body { overflow: hidden; }
   .info-body-inner { padding: 0 18px 18px; }
+  .info-card > .info-body:first-child .info-body-inner { padding-top: 18px; }
   .info-body-inner p { margin: 0 0 10px; color: var(--text-2); font-size: 14.5px; line-height: 1.6; }
-  .beneficios-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
-  .beneficio-item { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; font-size: 13.5px; color: var(--text); }
-  .terapia-item { border-top: 1px solid var(--border); padding: 12px 0; }
-  .terapia-item:first-child { border-top: none; padding-top: 4px; }
+  .beneficios-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
+  .beneficio-item {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 12px; font-size: 13.5px; line-height: 1.35; color: var(--text);
+    box-shadow: var(--shadow-sm);
+  }
+  .beneficio-item::before {
+    content: "✓"; flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%;
+    background: var(--accent-soft); color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+  }
+  @media (max-width: 380px) { .beneficios-grid { grid-template-columns: 1fr; } }
+  .terapia-item {
+    background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent);
+    border-radius: 4px var(--r-btn) var(--r-btn) 4px; padding: 12px 16px; margin-top: 10px;
+    box-shadow: var(--shadow-sm);
+  }
+  .terapia-item:first-child { margin-top: 0; }
   .terapia-item h3 { margin: 0 0 4px; font-size: 15px; }
   .terapia-item p { margin: 0; font-size: 13.5px; }
 </style>
@@ -150,8 +190,11 @@
 <body>
 <div class="app">
   <div class="topbar">
-    <div class="brand-name">DAOMA</div>
-    <div class="brand-sub">Acupuntura Integral</div>
+    <img class="brand-logo" src="img/logo.png" alt="">
+    <div>
+      <div class="brand-name">DAOMA</div>
+      <div class="brand-sub">Acupuntura Integral</div>
+    </div>
   </div>
 
   <!-- INFO: contenido editable desde admin.html > Contenido -->
@@ -183,8 +226,17 @@
   <!-- PASO 2: horario -->
   <div class="card oculto" id="paso-horario">
     <h2>Elige día y hora</h2>
-    <p class="hint" id="hint-horario">Cupos reales de clínica, se actualizan al instante.</p>
-    <div id="calendario"></div>
+    <p class="hint" id="hint-horario">Cupos reales de clínica, se actualizan al instante. Navega entre meses para reservar con anticipación.</p>
+    <div class="cal-wrap">
+      <div class="cal-header">
+        <button type="button" class="cal-nav" id="cal-prev" onclick="cambiarMes(-1)" aria-label="Mes anterior">‹</button>
+        <div class="cal-mes" id="cal-mes-label"></div>
+        <button type="button" class="cal-nav" id="cal-next" onclick="cambiarMes(1)" aria-label="Mes siguiente">›</button>
+      </div>
+      <div class="cal-dow"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+    <div id="slots-dia"></div>
   </div>
 
   <!-- PASO 3: datos y pago -->
@@ -250,14 +302,6 @@
 // ========================================================================
 var API_URL = "https://script.google.com/macros/s/AKfycbxRnyIk695jw8lTVtMVZsqYi-7vI9dYR4PmDpcN0mzdRo1CamEjfy4u4F8ReBLrP8xX/exec";
 
-function toggleInfo(btn, idContenido) {
-  var body = document.getElementById(idContenido);
-  var abrir = !body.classList.contains('abierto');
-  document.querySelectorAll('.info-body.abierto').forEach(function (b) { b.classList.remove('abierto'); });
-  document.querySelectorAll('.info-toggle.abierto').forEach(function (b) { b.classList.remove('abierto'); });
-  if (abrir) { body.classList.add('abierto'); btn.classList.add('abierto'); }
-}
-
 var estado = {
   tipo: 'CLINICA',
   servicioId: null,
@@ -297,7 +341,7 @@ function pintarInfo() {
   if (!info) return;
 
   if (info.queEs) {
-    cont.appendChild(crearInfoCard('¿Qué es la acupuntura?', 'info-que-es',
+    cont.appendChild(crearInfoCard('', 'info-que-es',
       info.queEs.split('\n').filter(Boolean).map(function (p) { return '<p>' + p + '</p>'; }).join('')));
   }
   if (info.beneficios && info.beneficios.length) {
@@ -309,8 +353,7 @@ function pintarInfo() {
   }
   if (info.terapias && info.terapias.length) {
     var lista = info.terapias.map(function (t, i) {
-      return '<div class="terapia-item"' + (i === 0 ? ' style="border-top:none;padding-top:4px;"' : '') + '>' +
-        '<h3>' + t.nombre + '</h3><p>' + t.descripcion + '</p></div>';
+      return '<div class="terapia-item"><h3>' + t.nombre + '</h3><p>' + t.descripcion + '</p></div>';
     }).join('');
     cont.appendChild(crearInfoCard('Terapias que ofrecemos', 'info-terapias', lista));
   }
@@ -320,10 +363,8 @@ function crearInfoCard(titulo, id, contenidoHtml) {
   var card = document.createElement('div');
   card.className = 'info-card';
   card.innerHTML =
-    '<button class="info-toggle" onclick="toggleInfo(this, \'' + id + '\')">' +
-      '<h2>' + titulo + '</h2><span class="chev">▾</span>' +
-    '</button>' +
-    '<div class="info-body" id="' + id + '"><div class="info-body-inner">' + contenidoHtml + '</div></div>';
+    (titulo ? '<div class="info-toggle"><h2>' + titulo + '</h2></div>' : '') +
+    '<div class="info-body abierto" id="' + id + '"><div class="info-body-inner">' + contenidoHtml + '</div></div>';
   return card;
 }
 
@@ -366,38 +407,113 @@ function mostrarPasoSiguiente() {
     mostrarPasoDatos();
   } else {
     document.getElementById('paso-horario').classList.remove('oculto');
-    cargarCupos();
+    iniciarCalendario();
   }
 }
 
-async function cargarCupos() {
-  var cal = document.getElementById('calendario');
-  cal.innerHTML = 'Cargando cupos...';
-  var res = await llamarGet({ accion: 'cupos_disponibles' });
-  if (!res.ok) { cal.innerHTML = 'No se pudieron cargar los cupos.'; return; }
-  if (!res.dias.length) { cal.innerHTML = '<p class="hint">No hay cupos disponibles en los próximos días. Escríbenos por Instagram.</p>'; return; }
-  cal.innerHTML = '';
-  res.dias.forEach(function (dia) {
-    var label = document.createElement('div');
-    label.className = 'dia-label';
-    label.textContent = formatearFecha(dia.fecha);
-    cal.appendChild(label);
-    var grid = document.createElement('div');
-    grid.className = 'slots';
-    dia.slots.forEach(function (hora) {
-      var el = document.createElement('div');
-      el.className = 'slot';
-      el.textContent = hora;
-      el.onclick = function () {
-        estado.fecha = dia.fecha; estado.hora = hora;
-        document.querySelectorAll('.slot').forEach(function (s) { s.classList.remove('sel'); });
-        el.classList.add('sel');
-        mostrarPasoDatos();
-      };
-      grid.appendChild(el);
-    });
-    cal.appendChild(grid);
+// ---------- Calendario mensual ----------
+var calEstado = { anio: 0, mes: 0, dias: {}, diaSel: null };
+var HOY = new Date(); HOY.setHours(0, 0, 0, 0);
+
+function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+function fmtISO(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+
+function iniciarCalendario() {
+  calEstado.anio = HOY.getFullYear();
+  calEstado.mes = HOY.getMonth();
+  calEstado.diaSel = null;
+  document.getElementById('slots-dia').innerHTML = '';
+  renderizarCalendario();
+}
+
+function cambiarMes(delta) {
+  var d = new Date(calEstado.anio, calEstado.mes + delta, 1);
+  var minimo = new Date(HOY.getFullYear(), HOY.getMonth(), 1);
+  if (d < minimo) return;
+  calEstado.anio = d.getFullYear();
+  calEstado.mes = d.getMonth();
+  calEstado.diaSel = null;
+  document.getElementById('slots-dia').innerHTML = '';
+  renderizarCalendario();
+}
+
+async function renderizarCalendario() {
+  var grid = document.getElementById('cal-grid');
+  var label = document.getElementById('cal-mes-label');
+  var primerDia = new Date(calEstado.anio, calEstado.mes, 1);
+  var ultimoDia = new Date(calEstado.anio, calEstado.mes + 1, 0);
+  label.textContent = primerDia.toLocaleDateString('es-CL', { month: 'long', year: 'numeric' });
+
+  var esMesActual = calEstado.anio === HOY.getFullYear() && calEstado.mes === HOY.getMonth();
+  document.getElementById('cal-prev').disabled = esMesActual;
+
+  grid.innerHTML = '<p class="hint">Cargando cupos...</p>';
+  var res = await llamarGet({ accion: 'cupos_disponibles', desde: fmtISO(primerDia), hasta: fmtISO(ultimoDia) });
+  calEstado.dias = {};
+  if (res.ok) res.dias.forEach(function (d) { calEstado.dias[d.fecha] = d.slots; });
+
+  grid.innerHTML = '';
+  var offset = (primerDia.getDay() + 6) % 7; // semana empieza lunes
+  for (var i = 0; i < offset; i++) {
+    var vacio = document.createElement('div');
+    vacio.className = 'cal-day vacio';
+    grid.appendChild(vacio);
+  }
+  for (var dia = 1; dia <= ultimoDia.getDate(); dia++) {
+    var fechaObj = new Date(calEstado.anio, calEstado.mes, dia);
+    var fechaStr = fmtISO(fechaObj);
+    var celda = document.createElement('div');
+    celda.className = 'cal-day';
+    celda.textContent = dia;
+    if (fechaObj < HOY) {
+      celda.classList.add('pasado');
+    } else if (calEstado.dias[fechaStr] && calEstado.dias[fechaStr].length) {
+      celda.classList.add('disponible');
+      celda.onclick = (function (fechaStr, celda) {
+        return function () { seleccionarDia(fechaStr, celda); };
+      })(fechaStr, celda);
+    } else {
+      celda.classList.add('sin-cupos');
+    }
+    grid.appendChild(celda);
+  }
+
+  if (!res.ok || !Object.keys(calEstado.dias).length) {
+    var aviso = document.createElement('p');
+    aviso.className = 'hint';
+    aviso.style.marginTop = '10px';
+    aviso.textContent = 'No hay cupos disponibles este mes. Probá el mes siguiente o escríbenos por Instagram.';
+    grid.parentElement.appendChild(aviso);
+  }
+}
+
+function seleccionarDia(fechaStr, celda) {
+  document.querySelectorAll('.cal-day.sel').forEach(function (c) { c.classList.remove('sel'); });
+  celda.classList.add('sel');
+  calEstado.diaSel = fechaStr;
+
+  var cont = document.getElementById('slots-dia');
+  cont.innerHTML = '';
+  var label = document.createElement('div');
+  label.className = 'dia-label';
+  label.textContent = formatearFecha(fechaStr);
+  cont.appendChild(label);
+
+  var grid = document.createElement('div');
+  grid.className = 'slots';
+  calEstado.dias[fechaStr].forEach(function (hora) {
+    var el = document.createElement('div');
+    el.className = 'slot';
+    el.textContent = hora;
+    el.onclick = function () {
+      estado.fecha = fechaStr; estado.hora = hora;
+      document.querySelectorAll('.slot').forEach(function (s) { s.classList.remove('sel'); });
+      el.classList.add('sel');
+      mostrarPasoDatos();
+    };
+    grid.appendChild(el);
   });
+  cont.appendChild(grid);
 }
 
 function formatearFecha(fechaStr) {

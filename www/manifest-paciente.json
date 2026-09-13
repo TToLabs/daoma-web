@@ -1,0 +1,12 @@
+{
+  "name": "DAOMA Acupuntura",
+  "short_name": "DAOMA",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#F5F3EE",
+  "theme_color": "#2E4034",
+  "icons": [
+    { "src": "img/icon-paciente.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any" },
+    { "src": "img/icon-paciente.png", "sizes": "1024x1024", "type": "image/png", "purpose": "maskable" }
+  ]
+}

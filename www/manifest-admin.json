@@ -1,0 +1,12 @@
+{
+  "name": "DAOMA Agenda de Turnos",
+  "short_name": "DAOMA Agenda",
+  "start_url": "./admin.html",
+  "display": "standalone",
+  "background_color": "#F5F3EE",
+  "theme_color": "#2E4034",
+  "icons": [
+    { "src": "img/icon-admin.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any" },
+    { "src": "img/icon-admin.png", "sizes": "1024x1024", "type": "image/png", "purpose": "maskable" }
+  ]
+}
