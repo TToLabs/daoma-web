@@ -264,6 +264,7 @@
   <div class="sub-tabs oculto" data-cat="clientes">
     <button class="sub-tab activo" data-vista="clientes" onclick="cambiarVista('clientes')">Directorio</button>
     <button class="sub-tab" data-vista="resenas" onclick="cambiarVista('resenas')">Reseñas</button>
+    <button class="sub-tab" data-vista="seguimiento" onclick="cambiarVista('seguimiento')">Seguimiento</button>
   </div>
   <div class="sub-tabs oculto" data-cat="precios">
     <button class="sub-tab activo" data-vista="servicios" onclick="cambiarVista('servicios')">Servicios</button>
@@ -307,6 +308,15 @@
     <p class="hint" style="margin-top:8px;">Las opiniones que envían los pacientes (link por WhatsApp desde "Pedir reseña") quedan acá hasta que las apruebes o rechaces.</p>
     <button class="btn btn-ghost btn-sm" onclick="cargarResenas()">↻ Actualizar</button>
     <div id="lista-resenas"></div>
+  </div>
+
+  <!-- SEGUIMIENTO: pacientes atendidos que cumplen 4/15/30 días sin
+       volver a agendar. Respaldo manual del bot automático (todavía sin
+       desplegar, ver daoma-bot) — el mismo cálculo alimenta a los dos. -->
+  <div class="vista" id="vista-seguimiento">
+    <p class="hint" style="margin-top:8px;">Pacientes atendidos que llevan 4, 15 o 30 días sin volver a agendar. Tocá el link para mandarles el mensaje por WhatsApp, y marcalo como enviado para que no vuelva a aparecer.</p>
+    <button class="btn btn-ghost btn-sm" onclick="cargarSeguimientos()">↻ Actualizar</button>
+    <div id="lista-seguimiento"></div>
   </div>
 
   <!-- HORARIOS -->
@@ -501,7 +511,7 @@ if (USUARIO && PIN) entrarConCredenciales().catch(function(){});
 // no necesita fila de sub-pestañas propia.
 var CATEGORIAS = {
   agenda: ['agenda', 'pendientes'],
-  clientes: ['clientes', 'resenas'],
+  clientes: ['clientes', 'resenas', 'seguimiento'],
   precios: ['servicios', 'promos'],
   web: ['contenido'],
   ajustes: ['horarios', 'config']
@@ -518,6 +528,7 @@ function cambiarVista(v) {
   document.querySelectorAll('.sub-tab').forEach(function (b) { b.classList.toggle('activo', b.dataset.vista === v); });
   if (v === 'clientes') cargarClientes();
   if (v === 'resenas') cargarResenas();
+  if (v === 'seguimiento') cargarSeguimientos();
 }
 // Desde el menú se entra siempre a la primera vista de la categoría.
 function irACategoria(cat) {
@@ -635,11 +646,11 @@ function renderReserva(r) {
     var b3 = boton('Marcar atendida', 'btn-ok', function () { accionSimple('marcar_atendida', r.reserva_id); });
     var b4 = boton('No asistió', 'btn-danger', function () { accionSimple('marcar_no_asistio', r.reserva_id); });
     acciones.appendChild(b3); acciones.appendChild(b4);
-    // Manual, mismo patrón que BANMEDICA (wa.me, sin API): sin conexión
-    // real a WhatsApp, no hay forma de mandarlo solo — el acupunturista
-    // toca el link y confirma el envío desde su teléfono. Solo el día de
-    // la cita, no tiene sentido "recordar" con semanas de anticipación.
-    if (r.fecha === hoyISO()) {
+    // Respaldo manual — el envío automático (daoma-bot, ver cola en el
+    // backend) es el método principal y cubre esta misma ventana
+    // (hoy/mañana); este botón queda por si el bot está caído o todavía
+    // no está desplegado.
+    if (r.fecha === hoyISO() || r.fecha === mananaISO()) {
       var btnRecordar = document.createElement('a');
       btnRecordar.className = 'btn btn-sm btn-whatsapp';
       btnRecordar.textContent = 'Recordar por WhatsApp';
@@ -686,10 +697,16 @@ function hoyISO() {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
+function mananaISO() {
+  var d = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
 function linkRecordatorioWhatsApp(r) {
   var tel = limpiarTelefono(r.telefono).replace(/^\+/, '');
-  var mensaje = 'Hola ' + (r.nombre || '').split(' ')[0] + '! Te escribo de DAOMA para recordarte tu sesión de hoy ' +
-    r.fecha + ' a las ' + r.hora + (r.tipo === 'DOMICILIO' ? (' en ' + r.direccion + ', ' + r.comuna) : ' en la clínica') + '. ¡Te esperamos!';
+  var cuando = r.fecha === hoyISO() ? 'de hoy' : 'de mañana';
+  var mensaje = 'Hola ' + (r.nombre || '').split(' ')[0] + '! Te escribimos de DAOMA para recordarte tu sesión ' +
+    cuando + ' a las ' + r.hora + (r.tipo === 'DOMICILIO' ? (' en ' + r.direccion + ', ' + r.comuna) : ' en la clínica') + '. ¡Te esperamos!';
   return 'https://wa.me/' + tel + '?text=' + encodeURIComponent(mensaje);
 }
 
@@ -831,6 +848,7 @@ async function pintarHistorial(c, cont) {
         '<div class="historial-fecha">' + formatearFechaCorta(h.fecha) + '</div>' +
         (h.diagnostico ? '<p><strong>Diagnóstico:</strong> ' + h.diagnostico + '</p>' : '') +
         (h.tratamiento ? '<p><strong>Tratamiento:</strong> ' + h.tratamiento + '</p>' : '') +
+        (h.recomendacion ? '<p><strong>Recomendación:</strong> ' + h.recomendacion + '</p>' : '') +
         (h.notas ? '<p><strong>Notas:</strong> ' + h.notas + '</p>' : '');
       cont.appendChild(item);
     });
@@ -850,8 +868,11 @@ async function pintarHistorial(c, cont) {
     '<textarea id="hist-diag-' + telLimpio + '" placeholder="Qué observaste en esta sesión"></textarea>' +
     '<label>Tratamiento</label>' +
     '<textarea id="hist-trat-' + telLimpio + '" placeholder="Puntos tratados, técnicas usadas"></textarea>' +
+    '<label>Recomendación</label>' +
+    '<textarea id="hist-recom-' + telLimpio + '" placeholder="Qué debe seguir haciendo el paciente hasta la próxima sesión"></textarea>' +
     '<label>Notas</label>' +
-    '<textarea id="hist-notas-' + telLimpio + '" placeholder="Evolución, recomendaciones, lo que sea útil para la próxima sesión"></textarea>' +
+    '<textarea id="hist-notas-' + telLimpio + '" placeholder="Evolución, lo que sea útil para la próxima sesión (esto NO se manda por WhatsApp)"></textarea>' +
+    '<p class="hint" style="margin:6px 0 0;font-size:12.5px;">Si cargás diagnóstico, tratamiento o recomendación, se le manda un resumen al paciente por WhatsApp automáticamente.</p>' +
     '<button class="btn btn-primary btn-sm" style="margin-top:8px;" type="button">+ Agregar al historial</button>' +
     '<div class="msg oculto" id="hist-msg-' + telLimpio + '"></div>';
   form.querySelector('button').onclick = function () { agregarHistorialCliente(c); };
@@ -863,13 +884,15 @@ async function agregarHistorialCliente(c) {
   var fecha = document.getElementById('hist-fecha-' + telLimpio).value;
   var diagnostico = document.getElementById('hist-diag-' + telLimpio).value.trim();
   var tratamiento = document.getElementById('hist-trat-' + telLimpio).value.trim();
+  var recomendacion = document.getElementById('hist-recom-' + telLimpio).value.trim();
   var notas = document.getElementById('hist-notas-' + telLimpio).value.trim();
   var msg = document.getElementById('hist-msg-' + telLimpio);
   if (!fecha) { alert('Poné la fecha de la sesión.'); return; }
 
   var res = await llamarPost({
     accion: 'agregar_historial', telefono: c.telefono, nombre: c.nombre,
-    fecha: fecha, diagnostico: diagnostico, tratamiento: tratamiento, notas: notas
+    fecha: fecha, diagnostico: diagnostico, tratamiento: tratamiento,
+    recomendacion: recomendacion, notas: notas
   });
   if (!res.ok) {
     msg.textContent = res.error || 'No se pudo guardar.';
@@ -919,6 +942,57 @@ async function moderarResenaAdmin(resenaId, nuevoEstado) {
   var res = await llamarPost({ accion: 'moderar_resena', resena_id: resenaId, estado: nuevoEstado });
   if (!res.ok) { alert(res.error); return; }
   cargarResenas();
+}
+
+/* ------------------------- SEGUIMIENTO (4/15/30 días) ------------------------- */
+async function cargarSeguimientos() {
+  var cont = document.getElementById('lista-seguimiento');
+  cont.innerHTML = 'Cargando...';
+  var res = await llamarGet({ accion: 'seguimientos_admin' });
+  if (!res.ok || !res.seguimientos) { cont.innerHTML = '<p>Error: ' + (res.error || 'no se pudo cargar') + '</p>'; return; }
+  cont.innerHTML = '';
+  if (!res.seguimientos.length) { cont.innerHTML = '<p style="color:var(--text-2);margin-top:14px;">Nadie pendiente de seguimiento hoy — buena señal, todos volvieron a agendar o todavía no cumplen 4 días.</p>'; return; }
+  res.seguimientos.forEach(function (s) { cont.appendChild(renderSeguimiento(s)); });
+}
+
+function mensajeSeguimiento(s) {
+  var texto = 'Hola ' + (s.nombre || '').split(' ')[0] + '! Te escribimos de DAOMA — ¿cómo te has sentido desde tu última sesión?';
+  if (s.hito >= 15) texto += ' Todavía tenés cupos disponibles para seguir tu tratamiento cuando quieras.';
+  texto += ' Cualquier cosa que necesites, contanos.';
+  return texto;
+}
+
+function renderSeguimiento(s) {
+  var telLimpio = limpiarTelefono(s.telefono);
+  var div = document.createElement('div');
+  div.className = 'reserva';
+  div.innerHTML =
+    '<div class="reserva-top">' +
+      '<div>' +
+        '<div class="reserva-nombre">' + s.nombre + '</div>' +
+        '<div class="reserva-detalle">' + s.telefono + '</div>' +
+        '<div class="reserva-detalle">Sesión: ' + formatearFechaCorta(s.fecha_sesion) + ' · ' + s.dias_transcurridos + ' días sin volver a agendar</div>' +
+      '</div>' +
+      '<span class="estado-pill estado-pendiente_pago">' + s.hito + ' días</span>' +
+    '</div>';
+
+  var acciones = document.createElement('div');
+  acciones.className = 'reserva-acciones';
+  var btnWpp = document.createElement('a');
+  btnWpp.className = 'btn btn-sm btn-whatsapp';
+  btnWpp.textContent = 'Enviar por WhatsApp';
+  btnWpp.href = 'https://wa.me/' + telLimpio.replace(/^\+/, '') + '?text=' + encodeURIComponent(mensajeSeguimiento(s));
+  btnWpp.target = '_blank'; btnWpp.rel = 'noopener';
+  acciones.appendChild(btnWpp);
+  acciones.appendChild(boton('Marcar enviado', 'btn-ghost', function () { marcarSeguimientoEnviadoAdmin(s.reserva_id, s.hito); }));
+  div.appendChild(acciones);
+  return div;
+}
+
+async function marcarSeguimientoEnviadoAdmin(reservaId, hito) {
+  var res = await llamarPost({ accion: 'marcar_seguimiento_enviado', reserva_id: reservaId, hito: hito });
+  if (!res.ok) { alert(res.error); return; }
+  cargarSeguimientos();
 }
 
 /* ------------------------- CONFIGURACIÓN ------------------------- */
