@@ -144,6 +144,19 @@
   .historial-item p { margin: 2px 0; color: var(--text-2); }
   .historial-vacio { color: var(--text-2); font-size: 13.5px; margin-top: 6px; }
   .historial-form { margin-top: 12px; border-top: 1px dashed var(--border-strong); padding-top: 10px; }
+
+  #overlay-actualizacion {
+    position: fixed; inset: 0; z-index: 9999; background: rgba(35,36,31,0.78);
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .actualizacion-card {
+    background: var(--surface); border-radius: var(--r-card); padding: 30px 24px; max-width: 340px;
+    text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+  }
+  .actualizacion-ico { font-size: 40px; margin-bottom: 6px; }
+  .actualizacion-card h2 { margin: 0 0 8px; font-size: 19px; }
+  .actualizacion-card p { color: var(--text-2); font-size: 14.5px; margin: 0; line-height: 1.5; }
+  .actualizacion-card .btn { margin-top: 18px; width: 100%; }
   .reserva-acciones { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
   .aceptar-domicilio { display: flex; gap: 8px; margin-top: 10px; align-items: end; flex-wrap: wrap; }
   .aceptar-domicilio input { width: auto; }
@@ -410,6 +423,13 @@ var API_URL = "https://script.google.com/macros/s/AKfycbxRnyIk695jw8lTVtMVZsqYi-
 // WhatsApp para pedir la opinión del paciente.
 var RESENA_BASE_URL = "https://ttolabs.github.io/daoma-web/www/resena.html";
 
+// Actualización obligatoria de la app nativa — ver actualizarVersionApp()
+// en el backend. Subir a mano cada vez que se compila y sube un .apk
+// nuevo con cambios de HTML/CSS/JS.
+var APP_VERSION = 2;
+var APP_ID = 'admin';
+var APK_DESCARGA_URL = 'https://github.com/TToLabs/daoma-web/releases/download/latest/daoma-admin.apk';
+
 var USUARIO = localStorage.getItem('daoma_usuario') || '';
 var PIN = localStorage.getItem('daoma_pin') || '';
 var config = null;
@@ -524,6 +544,39 @@ function detectarPlataforma() {
   }
 }
 detectarPlataforma();
+
+// ------------------------- ACTUALIZACIÓN OBLIGATORIA -------------------------
+// Corre solo dentro de la app nativa (nunca en la web — ahí siempre está
+// la última versión sola). Si el backend dice que hay una versión más
+// nueva que APP_VERSION, bloquea toda la app con una pantalla que no se
+// puede cerrar hasta descargar el .apk nuevo.
+async function chequearActualizacion() {
+  if (!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) return;
+  try {
+    var r = await fetch(API_URL + '?' + new URLSearchParams({ accion: 'version_app', app: APP_ID }));
+    var d = await r.json();
+    if (d.ok && d.version > APP_VERSION) mostrarActualizacionObligatoria();
+  } catch (e) {
+    // Sin internet: no bloquea — se vuelve a chequear la próxima vez que
+    // abra la app con conexión.
+  }
+}
+
+function mostrarActualizacionObligatoria() {
+  if (document.getElementById('overlay-actualizacion')) return;
+  var overlay = document.createElement('div');
+  overlay.id = 'overlay-actualizacion';
+  overlay.innerHTML =
+    '<div class="actualizacion-card">' +
+      '<div class="actualizacion-ico">⬆️</div>' +
+      '<h2>Hay una versión nueva</h2>' +
+      '<p>Para seguir usando el panel hace falta actualizar la app primero. Es rápido.</p>' +
+      '<button class="btn btn-primary" type="button">Descargar actualización</button>' +
+    '</div>';
+  overlay.querySelector('button').onclick = function () { window.open(APK_DESCARGA_URL, '_system'); };
+  document.body.appendChild(overlay);
+}
+chequearActualizacion();
 
 /* ------------------------- AGENDA / RESERVAS ------------------------- */
 async function cargarReservas() {
