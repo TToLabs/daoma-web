@@ -569,7 +569,9 @@ function elegirTipo(tipo) {
 function mostrarPasoSiguiente() {
   if (!estado.servicioId) return;
   document.getElementById('paso-horario').classList.remove('oculto');
-  document.getElementById('hint-horario').textContent = estado.tipo === 'DOMICILIO'
+  var hintInicial = document.getElementById('hint-horario');
+  hintInicial.style.color = '';
+  hintInicial.textContent = estado.tipo === 'DOMICILIO'
     ? 'Cupos reales (con margen de traslado entre sesiones), se actualizan al instante.'
     : 'Cupos reales, se actualizan al instante. Navega entre meses para reservar con anticipación.';
   iniciarCalendario();
@@ -757,9 +759,34 @@ async function confirmarReserva() {
   }
 
   btn.disabled = false; btn.textContent = 'Confirmar reserva';
-  if (!res.ok) { mostrarError(res.error || 'No se pudo crear la reserva.'); return; }
+  if (!res.ok) {
+    if (esErrorDeHorarioOcupado(res.error)) { volverAlCalendarioPorConflicto(); return; }
+    mostrarError(res.error || 'No se pudo crear la reserva.');
+    return;
+  }
 
   mostrarResultado(res);
+}
+
+// Alguien más confirmó ese mismo horario justo antes (clínica o domicilio):
+// el backend rechaza la reserva con este mensaje. En vez de solo mostrar el
+// error, se avisa y se vuelve al calendario con los cupos reales ya
+// actualizados, para que elija otro horario sin tener que reiniciar todo.
+function esErrorDeHorarioOcupado(msg) {
+  return typeof msg === 'string' && msg.indexOf('acaba de ocupar') !== -1;
+}
+
+function volverAlCalendarioPorConflicto() {
+  document.getElementById('paso-direccion').classList.add('oculto');
+  document.getElementById('paso-datos').classList.add('oculto');
+  document.getElementById('paso-horario').classList.remove('oculto');
+  var hint = document.getElementById('hint-horario');
+  hint.textContent = 'Justo se ocupó ese horario — elegí otro de los que quedan disponibles.';
+  hint.style.color = 'var(--danger, #c0392b)';
+  document.getElementById('slots-dia').innerHTML = '';
+  calEstado.diaSel = null;
+  renderizarCalendario();
+  document.getElementById('paso-horario').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function mostrarError(msg) {
