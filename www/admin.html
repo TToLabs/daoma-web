@@ -437,12 +437,17 @@
       <label>Email</label><input type="text" id="banco-email">
     </div>
     <div class="card">
-      <h2>WhatsApp y Mercado Pago</h2>
+      <h2>WhatsApp</h2>
       <label>Tu WhatsApp (con código de país, ej: 56912345678)</label>
       <input type="tel" id="telefono-admin" placeholder="56912345678">
       <p class="hint" style="margin:6px 0 0;">Acá llegan los avisos de comprobantes que el sistema no pudo confirmar solo.</p>
-      <p class="hint" id="estado-mercadopago" style="margin:10px 0 0;font-weight:600;"></p>
-      <p class="hint" style="margin:2px 0 0;">El token de Mercado Pago no se carga acá por seguridad — se configura una sola vez directo en Apps Script (Configuración del proyecto → Propiedades del script → MP_ACCESS_TOKEN).</p>
+    </div>
+    <div class="card">
+      <h2>Mercado Pago</h2>
+      <p class="hint" id="mp-estado-texto" style="margin:0 0 10px;"></p>
+      <button class="btn btn-primary" id="btn-mp-conectar" onclick="conectarMercadoPago()">Conectar con Mercado Pago</button>
+      <button class="btn btn-danger btn-sm oculto" id="btn-mp-desvincular" onclick="desvincularMercadoPago()" style="margin-top:8px;">Desvincular</button>
+      <p class="hint" style="margin-top:10px;">Entrás con tu propia cuenta de Mercado Pago y la autorizás — el token nunca pasa por este panel.</p>
     </div>
     <button class="btn btn-primary btn-block" onclick="guardarTodo(this)">Guardar cambios</button>
   </div>
@@ -798,6 +803,53 @@ async function confirmarPagoManual(reservaId, pagoCompleto) {
   cargarReservas();
 }
 
+// ------------------------- MERCADO PAGO (conectar con la cuenta propia) -------------------------
+async function cargarEstadoMercadoPago() {
+  var res = await llamarGet({ accion: 'mi_mercadopago' });
+  var texto = document.getElementById('mp-estado-texto');
+  var btnConectar = document.getElementById('btn-mp-conectar');
+  var btnDesvincular = document.getElementById('btn-mp-desvincular');
+  if (!res.ok) { texto.textContent = 'No se pudo cargar el estado de Mercado Pago.'; return; }
+
+  if (!res.configurado) {
+    texto.textContent = '⚠️ Todavía no se puede conectar: falta configurar MP_CLIENT_ID/MP_CLIENT_SECRET en Apps Script (una sola vez, no depende de vos).';
+    texto.style.color = 'var(--danger)';
+    btnConectar.disabled = true;
+    btnDesvincular.classList.add('oculto');
+  } else if (res.vinculado) {
+    var fecha = res.vinculado_en ? new Date(res.vinculado_en).toLocaleDateString('es-CL') : '';
+    texto.textContent = '✅ Conectado con Mercado Pago' + (fecha ? (' desde el ' + fecha) : '') + '. Tus pacientes ya pueden pagar con débito o crédito.';
+    texto.style.color = 'var(--ok, #2E7D32)';
+    btnConectar.textContent = 'Reconectar';
+    btnDesvincular.classList.remove('oculto');
+  } else {
+    texto.textContent = 'Todavía no conectaste tu cuenta de Mercado Pago — tus pacientes solo ven transferencia mientras tanto.';
+    texto.style.color = 'var(--text-2)';
+    btnConectar.textContent = 'Conectar con Mercado Pago';
+    btnDesvincular.classList.add('oculto');
+  }
+}
+
+async function conectarMercadoPago() {
+  var btn = document.getElementById('btn-mp-conectar');
+  btn.disabled = true;
+  var res = await llamarGet({ accion: 'mp_link_vinculacion' });
+  btn.disabled = false;
+  if (!res.ok) { alert(res.error); return; }
+  if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+    window.open(res.url, '_system');
+  } else {
+    window.open(res.url, '_blank');
+  }
+}
+
+async function desvincularMercadoPago() {
+  if (!confirm('¿Desvincular tu cuenta de Mercado Pago? Tus pacientes van a dejar de ver esa opción hasta que vuelvas a conectarla.')) return;
+  var res = await llamarPost({ accion: 'desvincular_mercadopago' });
+  if (!res.ok) { alert(res.error); return; }
+  cargarEstadoMercadoPago();
+}
+
 function hoyISO() {
   var d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -1127,11 +1179,7 @@ function pintarConfig() {
   document.getElementById('banco-email').value = db.email || '';
 
   document.getElementById('telefono-admin').value = config.telefonoAdmin || '';
-  var elMp = document.getElementById('estado-mercadopago');
-  elMp.textContent = config.mercadoPagoDisponible
-    ? '✅ Mercado Pago está configurado y activo.'
-    : '⚠️ Mercado Pago todavía no está configurado — los pacientes solo ven transferencia.';
-  elMp.style.color = config.mercadoPagoDisponible ? 'var(--ok, #2E7D32)' : 'var(--danger)';
+  cargarEstadoMercadoPago();
 }
 
 function pintarReglas() {

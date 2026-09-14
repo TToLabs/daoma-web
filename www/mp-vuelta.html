@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>DAOMA — Mercado Pago</title>
+<style>
+  body { margin: 0; background: #F5F3EE; color: #23241F; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+         display: flex; justify-content: center; padding: 48px 16px; }
+  .card { background: #fff; border: 1px solid #E3DDD0; border-radius: 16px; padding: 28px 22px; max-width: 420px; width: 100%; text-align: center; }
+  h1 { font-size: 20px; margin: 0 0 10px; }
+  p { color: #5C5A4E; font-size: 16px; line-height: 1.5; margin: 0; }
+  .ok { color: #2E7D32; }
+  .error { color: #A6402F; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1 id="titulo">Vinculando tu Mercado Pago...</h1>
+  <p id="detalle">Un momento.</p>
+</div>
+<script>
+/* Página a la que Mercado Pago devuelve al acupunturista después de
+   autorizar (redirect_uri registrada en la aplicación de DAOMA). No
+   guarda nada: le pasa el code y el state al backend, que es quien
+   canjea el code por los tokens y valida que el state lo haya generado
+   este mismo panel (ver linkVinculacionMp/completarVinculacionMp en
+   Codigo.gs). Mismo patrón que Rumbo (Rumbo app/www/mp-vuelta.html),
+   adaptado a que DAOMA tiene un solo negocio, no una cuenta por
+   conductor — el token va en el CONFIG general. */
+(function () {
+  var API_URL = "https://script.google.com/macros/s/AKfycbxRnyIk695jw8lTVtMVZsqYi-7vI9dYR4PmDpcN0mzdRo1CamEjfy4u4F8ReBLrP8xX/exec";
+  var titulo = document.getElementById("titulo");
+  var detalle = document.getElementById("detalle");
+  var params = new URLSearchParams(window.location.search);
+  var code = params.get("code"), state = params.get("state");
+
+  function mostrar(ok, t, d) {
+    titulo.textContent = t;
+    titulo.className = ok ? "ok" : "error";
+    detalle.textContent = d;
+  }
+
+  if (!code || !state) {
+    mostrar(false, "No se completó la vinculación",
+      "Mercado Pago no devolvió la autorización. Volvé al panel DAOMA → Ajustes → Cuenta e intentalo de nuevo.");
+    return;
+  }
+
+  // Se saca el code de la barra de direcciones: es de un solo uso, pero no
+  // tiene sentido dejarlo en el historial del navegador.
+  history.replaceState(null, "", window.location.pathname);
+
+  fetch(API_URL + "?" + new URLSearchParams({ accion: "completar_vinculacion_mp", code: code, state: state }))
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (res.ok) {
+        mostrar(true, "¡Listo! Tu Mercado Pago quedó conectado",
+          "Ya podés cerrar esta pestaña y volver al panel DAOMA. Desde ahora tus pacientes pueden pagar con débito o crédito.");
+      } else {
+        mostrar(false, "No se pudo conectar", res.error + ".");
+      }
+    })
+    .catch(function () {
+      mostrar(false, "No se pudo conectar", "Hubo un problema de conexión. Volvé a intentarlo desde Ajustes.");
+    });
+})();
+</script>
+</body>
+</html>
