@@ -320,21 +320,16 @@
       <div class="tab" data-tipo="DOMICILIO" onclick="elegirTipo('DOMICILIO')">A domicilio</div>
     </div>
 
-    <div id="bloque-domicilio" class="oculto">
-      <label>Dirección</label>
-      <input type="text" id="direccion" placeholder="Calle y número">
-      <label>Comuna</label>
-      <input type="text" id="comuna" placeholder="Ej: Providencia">
-    </div>
-
     <label>Servicio</label>
     <div class="servicios" id="lista-servicios"></div>
   </div>
 
-  <!-- PASO 2: horario -->
+  <!-- PASO 2: horario (mismo calendario real para clínica y domicilio —
+       a domicilio se le suma un margen de 2 horas de traslado respecto
+       de cualquier otra sesión, lo calcula el backend) -->
   <div class="card oculto" id="paso-horario">
     <h2>Elige día y hora</h2>
-    <p class="hint" id="hint-horario">Cupos reales de clínica, se actualizan al instante. Navega entre meses para reservar con anticipación.</p>
+    <p class="hint" id="hint-horario">Cupos reales, se actualizan al instante. Navega entre meses para reservar con anticipación.</p>
     <div class="cal-wrap">
       <div class="cal-header">
         <button type="button" class="cal-nav" id="cal-prev" onclick="cambiarMes(-1)" aria-label="Mes anterior">‹</button>
@@ -345,6 +340,19 @@
       <div class="cal-grid" id="cal-grid"></div>
     </div>
     <div id="slots-dia"></div>
+  </div>
+
+  <!-- PASO 2.5: dirección (solo domicilio, después de elegir horario —
+       se pide acá porque recién ahí ya se sabe qué comuna cobrar) -->
+  <div class="card oculto" id="paso-direccion">
+    <h2>¿Dónde te atendemos?</h2>
+    <p class="hint">Con esto calculamos el recargo por traslado, si corresponde.</p>
+    <label>Dirección</label>
+    <input type="text" id="direccion" placeholder="Calle y número">
+    <label>Comuna</label>
+    <input type="text" id="comuna" placeholder="Ej: Providencia">
+    <div id="error-direccion" class="msg-error oculto"></div>
+    <button class="btn btn-primary" onclick="confirmarDireccion()">Siguiente</button>
   </div>
 
   <!-- PASO 3: datos y pago -->
@@ -426,7 +434,7 @@ var API_URL = "https://script.google.com/macros/s/AKfycbxRnyIk695jw8lTVtMVZsqYi-
 // Actualización obligatoria de la app nativa — ver actualizarVersionApp()
 // en el backend. Subir a mano cada vez que se compila y sube un .apk
 // nuevo con cambios de HTML/CSS/JS.
-var APP_VERSION = 3;
+var APP_VERSION = 4;
 var APP_ID = 'paciente';
 var APK_DESCARGA_URL = 'https://github.com/TToLabs/daoma-web/releases/download/latest/daoma-paciente.apk';
 
@@ -551,19 +559,20 @@ function pintarServicios() {
 function elegirTipo(tipo) {
   estado.tipo = tipo;
   document.querySelectorAll('.tab').forEach(function (t) { t.classList.toggle('activo', t.dataset.tipo === tipo); });
-  document.getElementById('bloque-domicilio').classList.toggle('oculto', tipo !== 'DOMICILIO');
   pintarServicios();
 }
 
+// Mismo calendario real para los dos tipos — a domicilio el backend le
+// suma el margen de 2 horas de traslado respecto de cualquier otra
+// sesión (clínica o domicilio), así que puede mostrar menos horarios
+// libres que clínica el mismo día.
 function mostrarPasoSiguiente() {
   if (!estado.servicioId) return;
-  if (estado.tipo === 'DOMICILIO') {
-    document.getElementById('paso-horario').classList.add('oculto');
-    mostrarPasoDatos();
-  } else {
-    document.getElementById('paso-horario').classList.remove('oculto');
-    iniciarCalendario();
-  }
+  document.getElementById('paso-horario').classList.remove('oculto');
+  document.getElementById('hint-horario').textContent = estado.tipo === 'DOMICILIO'
+    ? 'Cupos reales (con margen de traslado entre sesiones), se actualizan al instante.'
+    : 'Cupos reales, se actualizan al instante. Navega entre meses para reservar con anticipación.';
+  iniciarCalendario();
 }
 
 // ---------- Calendario mensual ----------
@@ -603,7 +612,7 @@ async function renderizarCalendario() {
   document.getElementById('cal-prev').disabled = esMesActual;
 
   grid.innerHTML = '<p class="hint">Cargando cupos...</p>';
-  var res = await llamarGet({ accion: 'cupos_disponibles', desde: fmtISO(primerDia), hasta: fmtISO(ultimoDia) });
+  var res = await llamarGet({ accion: 'cupos_disponibles', desde: fmtISO(primerDia), hasta: fmtISO(ultimoDia), tipo: estado.tipo });
   calEstado.dias = {};
   if (res.ok) res.dias.forEach(function (d) { calEstado.dias[d.fecha] = d.slots; });
 
@@ -661,10 +670,15 @@ function seleccionarDia(fechaStr, celda) {
     el.className = 'slot';
     el.textContent = hora;
     el.onclick = function () {
-      estado.fecha = fechaStr; estado.hora = hora;
       document.querySelectorAll('.slot').forEach(function (s) { s.classList.remove('sel'); });
       el.classList.add('sel');
-      mostrarPasoDatos();
+      if (estado.tipo === 'DOMICILIO') {
+        estado.fechaSolicitada = fechaStr; estado.horaSolicitada = hora;
+        mostrarPasoDireccion();
+      } else {
+        estado.fecha = fechaStr; estado.hora = hora;
+        mostrarPasoDatos();
+      }
     };
     grid.appendChild(el);
   });
@@ -674,6 +688,25 @@ function seleccionarDia(fechaStr, celda) {
 function formatearFecha(fechaStr) {
   var d = new Date(fechaStr + 'T00:00:00');
   return d.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+function mostrarPasoDireccion() {
+  document.getElementById('paso-horario').classList.add('oculto');
+  document.getElementById('paso-direccion').classList.remove('oculto');
+}
+
+function confirmarDireccion() {
+  var direccion = document.getElementById('direccion').value.trim();
+  var comuna = document.getElementById('comuna').value.trim();
+  var errorDiv = document.getElementById('error-direccion');
+  if (!direccion || !comuna) {
+    errorDiv.textContent = 'Falta la dirección o la comuna.';
+    errorDiv.classList.remove('oculto');
+    return;
+  }
+  errorDiv.classList.add('oculto');
+  document.getElementById('paso-direccion').classList.add('oculto');
+  mostrarPasoDatos();
 }
 
 function mostrarPasoDatos() {
@@ -714,12 +747,11 @@ async function confirmarReserva() {
   } else {
     var direccion = document.getElementById('direccion').value.trim();
     var comuna = document.getElementById('comuna').value.trim();
-    if (!direccion || !comuna) { mostrarError('Falta la dirección o la comuna.'); btn.disabled = false; btn.textContent = 'Confirmar reserva'; return; }
     res = await llamarPost({
       accion: 'crear_solicitud_domicilio',
       nombre: nombre, telefono: telefono, email: email,
       direccion: direccion, comuna: comuna,
-      fecha_solicitada: '', hora_solicitada: '', servicio_id: estado.servicioId,
+      fecha_solicitada: estado.fechaSolicitada, hora_solicitada: estado.horaSolicitada, servicio_id: estado.servicioId,
       acepta_terminos_sena: true
     });
   }
@@ -739,6 +771,7 @@ function mostrarError(msg) {
 function mostrarResultado(res) {
   document.getElementById('paso-modalidad').classList.add('oculto');
   document.getElementById('paso-horario').classList.add('oculto');
+  document.getElementById('paso-direccion').classList.add('oculto');
   document.getElementById('paso-datos').classList.add('oculto');
   document.getElementById('paso-resultado').classList.remove('oculto');
 
