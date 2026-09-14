@@ -51,6 +51,12 @@
        poco confiable en mobile Safari — se activa solo en escritorio. */
     body { background-attachment: fixed; }
   }
+  /* Dentro de la app (Capacitor = Chromium, no Safari) el mismo fixed sí
+     es confiable, así que se activa siempre ahí aunque la pantalla sea
+     angosta: la imagen queda ocupando toda la pantalla de arriba a
+     abajo, y lo único que se mueve al hacer scroll es el módulo de
+     contenido, nunca el fondo. */
+  body.nativo { background-attachment: fixed; }
   /* El contenido flota en un módulo semitransparente con blur para
      leerse bien encima de la imagen, en vez de tener que esquivarla. */
   .app, .login-wrap {
@@ -122,7 +128,7 @@
   body.nativo svg.ico { width: 22px; height: 22px; }
   body.nativo #panel { padding-bottom: 76px; }
 
-  .sub-tabs { display: flex; gap: 6px; margin: 10px 0; flex-wrap: wrap; }
+  .sub-tabs { display: flex; gap: 6px; margin: 10px 0 20px; flex-wrap: wrap; }
   .sub-tab { padding: 7px 13px; border-radius: var(--r-btn); border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-weight: 600; font-size: 13.5px; }
   .sub-tab.activo { background: var(--primary); color: var(--primary-ink); border-color: var(--primary); }
 
@@ -260,6 +266,7 @@
   <div class="sub-tabs" data-cat="agenda">
     <button class="sub-tab activo" data-vista="agenda" onclick="cambiarVista('agenda')">Reservas</button>
     <button class="sub-tab" data-vista="pendientes" onclick="cambiarVista('pendientes')">Pendientes</button>
+    <button class="sub-tab" data-vista="comprobantes" onclick="cambiarVista('comprobantes')">Revisar comprobantes</button>
   </div>
   <div class="sub-tabs oculto" data-cat="clientes">
     <button class="sub-tab activo" data-vista="clientes" onclick="cambiarVista('clientes')">Directorio</button>
@@ -291,6 +298,15 @@
     <p class="hint" style="margin-top:8px;">Pacientes que cancelaron o no asistieron, guardados aparte para retomar contacto y ofrecerles usar lo ya abonado en una nueva sesión.</p>
     <button class="btn btn-ghost btn-sm" onclick="cargarReservas()">↻ Actualizar</button>
     <div id="lista-pendientes"></div>
+  </div>
+
+  <!-- REVISAR COMPROBANTES: casos especiales — el OCR no pudo confirmar
+       el monto del comprobante después de 2 intentos. El cupo queda
+       congelado (nadie más lo puede tomar) hasta que se revise acá. -->
+  <div class="vista" id="vista-comprobantes">
+    <p class="hint" style="margin-top:8px;">El sistema no pudo confirmar el monto de estos comprobantes automáticamente (2 intentos). El cupo de la cita queda reservado y congelado hasta que confirmes o rechaces acá — recordá que la foto te llega por WhatsApp.</p>
+    <button class="btn btn-ghost btn-sm" onclick="cargarCasosEspeciales()">↻ Actualizar</button>
+    <div id="lista-comprobantes"></div>
   </div>
 
   <!-- CLIENTES: directorio armado agrupando las reservas por teléfono
@@ -420,6 +436,14 @@
       <label>Nombre titular</label><input type="text" id="banco-nombre">
       <label>Email</label><input type="text" id="banco-email">
     </div>
+    <div class="card">
+      <h2>WhatsApp y Mercado Pago</h2>
+      <label>Tu WhatsApp (con código de país, ej: 56912345678)</label>
+      <input type="tel" id="telefono-admin" placeholder="56912345678">
+      <p class="hint" style="margin:6px 0 0;">Acá llegan los avisos de comprobantes que el sistema no pudo confirmar solo.</p>
+      <p class="hint" id="estado-mercadopago" style="margin:10px 0 0;font-weight:600;"></p>
+      <p class="hint" style="margin:2px 0 0;">El token de Mercado Pago no se carga acá por seguridad — se configura una sola vez directo en Apps Script (Configuración del proyecto → Propiedades del script → MP_ACCESS_TOKEN).</p>
+    </div>
     <button class="btn btn-primary btn-block" onclick="guardarTodo(this)">Guardar cambios</button>
   </div>
 </div>
@@ -436,7 +460,7 @@ var RESENA_BASE_URL = "https://ttolabs.github.io/daoma-web/www/resena.html";
 // Actualización obligatoria de la app nativa — ver actualizarVersionApp()
 // en el backend. Subir a mano cada vez que se compila y sube un .apk
 // nuevo con cambios de HTML/CSS/JS.
-var APP_VERSION = 5;
+var APP_VERSION = 7;
 var APP_ID = 'admin';
 var APK_DESCARGA_URL = 'https://github.com/TToLabs/daoma-web/releases/download/latest/daoma-admin.apk';
 
@@ -510,7 +534,7 @@ if (USUARIO && PIN) entrarConCredenciales().catch(function(){});
 // abajo, ver detectarPlataforma()). "web" tiene una sola vista, así que
 // no necesita fila de sub-pestañas propia.
 var CATEGORIAS = {
-  agenda: ['agenda', 'pendientes'],
+  agenda: ['agenda', 'pendientes', 'comprobantes'],
   clientes: ['clientes', 'resenas', 'seguimiento'],
   precios: ['servicios', 'promos'],
   web: ['contenido'],
@@ -529,6 +553,7 @@ function cambiarVista(v) {
   if (v === 'clientes') cargarClientes();
   if (v === 'resenas') cargarResenas();
   if (v === 'seguimiento') cargarSeguimientos();
+  if (v === 'comprobantes') cargarCasosEspeciales();
 }
 // Desde el menú se entra siempre a la primera vista de la categoría.
 function irACategoria(cat) {
@@ -564,16 +589,17 @@ detectarPlataforma();
 async function chequearActualizacion() {
   if (!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) return;
   try {
-    var r = await fetch(API_URL + '?' + new URLSearchParams({ accion: 'version_app', app: APP_ID }));
+    var url = API_URL + '?' + new URLSearchParams({ accion: 'version_app', app: APP_ID, _: Date.now() });
+    var r = await fetch(url, { cache: 'no-store' });
     var d = await r.json();
-    if (d.ok && d.version > APP_VERSION) mostrarActualizacionObligatoria();
+    if (d.ok && d.version > APP_VERSION) mostrarActualizacionObligatoria(d.version);
   } catch (e) {
     // Sin internet: no bloquea — se vuelve a chequear la próxima vez que
     // abra la app con conexión.
   }
 }
 
-function mostrarActualizacionObligatoria() {
+function mostrarActualizacionObligatoria(versionBackend) {
   if (document.getElementById('overlay-actualizacion')) return;
   var overlay = document.createElement('div');
   overlay.id = 'overlay-actualizacion';
@@ -584,7 +610,24 @@ function mostrarActualizacionObligatoria() {
       '<p>Para seguir usando el panel hace falta actualizar la app primero. Es rápido.</p>' +
       '<button class="btn btn-primary" type="button">Descargar actualización</button>' +
     '</div>';
-  overlay.querySelector('button').onclick = function () { window.open(APK_DESCARGA_URL, '_system'); };
+  var boton = overlay.querySelector('button');
+  boton.onclick = function () {
+    boton.disabled = true;
+    boton.textContent = 'Descargando...';
+    // Descarga e instala dentro de la carpeta privada de la app (nunca
+    // en Descargas) para que no queden copias viejas dando vueltas — ver
+    // ApkInstalador.java. Si por algún motivo el plugin no está
+    // disponible, se cae al método anterior como respaldo.
+    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.ApkInstalador) {
+      window.Capacitor.Plugins.ApkInstalador.descargarEInstalar({ url: APK_DESCARGA_URL })
+        .catch(function () { window.open(APK_DESCARGA_URL, '_system'); })
+        .finally(function () { boton.disabled = false; boton.textContent = 'Descargar actualización'; });
+    } else {
+      window.open(APK_DESCARGA_URL, '_system');
+      boton.disabled = false;
+      boton.textContent = 'Descargar actualización';
+    }
+  };
   document.body.appendChild(overlay);
 }
 chequearActualizacion();
@@ -596,7 +639,10 @@ async function cargarReservas() {
   var contPend = document.getElementById('lista-pendientes');
   if (!res.ok) { cont.innerHTML = '<p>Error: ' + res.error + '</p>'; contPend.innerHTML = ''; return; }
 
-  var activas = res.reservas.filter(function (r) { return r.estado !== 'pendiente_recuperar'; });
+  // Los casos especiales (comprobante sin confirmar por OCR) se revisan
+  // aparte, en la pestaña "Revisar comprobantes" — acá no, para no
+  // duplicar el flujo con el botón genérico "Confirmar pago".
+  var activas = res.reservas.filter(function (r) { return r.estado !== 'pendiente_recuperar' && r.caso_especial !== 'SI'; });
   var pendientes = res.reservas.filter(function (r) { return r.estado === 'pendiente_recuperar'; });
 
   cont.innerHTML = '';
@@ -663,6 +709,17 @@ function renderReserva(r) {
   if (r.estado === 'atendida') {
     var accionesResena = document.createElement('div');
     accionesResena.className = 'reserva-acciones';
+    var saldoPendiente = Math.round(Number(r.precio_total)) - Math.round(Number(r.monto_sena));
+    if (saldoPendiente > 0 && r.saldo_cobrado_pos !== 'SI') {
+      accionesResena.appendChild(boton('Cobrar diferencia con POS ($' + saldoPendiente.toLocaleString('es-CL') + ')', 'btn-ok', function () {
+        accionSimple('cobrar_saldo_pos', r.reserva_id);
+      }));
+    } else if (saldoPendiente > 0 && r.saldo_cobrado_pos === 'SI') {
+      var chip = document.createElement('span');
+      chip.className = 'estado-pill estado-confirmada';
+      chip.textContent = 'Diferencia cobrada con POS';
+      accionesResena.appendChild(chip);
+    }
     var btnResena = document.createElement('a');
     btnResena.className = 'btn btn-sm btn-whatsapp';
     btnResena.textContent = 'Pedir reseña';
@@ -690,6 +747,55 @@ function renderReserva(r) {
     }
   }
   return div;
+}
+
+// REVISAR COMPROBANTES — casos especiales: el OCR no pudo confirmar el
+// monto 2 veces, la foto se manda por WhatsApp (daoma-bot). Acá se
+// confirma a mano si lo que llegó fue la seña o el pago completo.
+async function cargarCasosEspeciales() {
+  var res = await llamarGet({ accion: 'casos_especiales_admin' });
+  var cont = document.getElementById('lista-comprobantes');
+  if (!res.ok) { cont.innerHTML = '<p>Error: ' + res.error + '</p>'; return; }
+  cont.innerHTML = '';
+  if (!res.casos.length) { cont.innerHTML = '<p style="color:var(--text-2);margin-top:14px;">No hay comprobantes pendientes de revisión.</p>'; return; }
+  res.casos.forEach(function (r) { cont.appendChild(renderCasoEspecial(r)); });
+}
+
+function renderCasoEspecial(r) {
+  var div = document.createElement('div');
+  div.className = 'reserva';
+  div.innerHTML =
+    '<div class="reserva-top">' +
+      '<div>' +
+        '<div class="reserva-nombre">' + r.nombre + ' <span style="font-weight:400;color:var(--text-3);">· ' + (r.tipo === 'DOMICILIO' ? '🏠 Domicilio' : '🏥 Clínica') + '</span></div>' +
+        '<div class="reserva-detalle">' + r.descripcion + ' · ' + r.fecha + ' ' + r.hora + '</div>' +
+        '<div class="reserva-detalle">' + r.telefono + '</div>' +
+        '<div class="reserva-detalle">Total: $' + Number(r.precio_total).toLocaleString('es-CL') + ' · Seña: $' + Number(r.monto_sena).toLocaleString('es-CL') + '</div>' +
+        '<div class="reserva-detalle" style="color:var(--danger);">' + (r.comprobante_declarado || '') + '</div>' +
+      '</div>' +
+      '<span class="estado-pill estado-pendiente_pago">revisar</span>' +
+    '</div>';
+
+  var acciones = document.createElement('div');
+  acciones.className = 'reserva-acciones';
+  acciones.appendChild(boton('Confirmar seña ($' + Number(r.monto_sena).toLocaleString('es-CL') + ')', 'btn-ok', function () {
+    confirmarPagoManual(r.reserva_id, false);
+  }));
+  acciones.appendChild(boton('Confirmar pago completo ($' + Number(r.precio_total).toLocaleString('es-CL') + ')', 'btn-ok', function () {
+    confirmarPagoManual(r.reserva_id, true);
+  }));
+  acciones.appendChild(boton('Rechazar / cancelar', 'btn-danger', function () {
+    accionSimple('cancelar_reserva', r.reserva_id);
+  }));
+  div.appendChild(acciones);
+  return div;
+}
+
+async function confirmarPagoManual(reservaId, pagoCompleto) {
+  var res = await llamarPost({ accion: 'confirmar_pago_manual', reserva_id: reservaId, pago_completo: pagoCompleto });
+  if (!res.ok) { alert(res.error); return; }
+  cargarCasosEspeciales();
+  cargarReservas();
 }
 
 function hoyISO() {
@@ -1019,6 +1125,13 @@ function pintarConfig() {
   document.getElementById('banco-rut').value = db.rut || '';
   document.getElementById('banco-nombre').value = db.nombre || '';
   document.getElementById('banco-email').value = db.email || '';
+
+  document.getElementById('telefono-admin').value = config.telefonoAdmin || '';
+  var elMp = document.getElementById('estado-mercadopago');
+  elMp.textContent = config.mercadoPagoDisponible
+    ? '✅ Mercado Pago está configurado y activo.'
+    : '⚠️ Mercado Pago todavía no está configurado — los pacientes solo ven transferencia.';
+  elMp.style.color = config.mercadoPagoDisponible ? 'var(--ok, #2E7D32)' : 'var(--danger)';
 }
 
 function pintarReglas() {
@@ -1287,6 +1400,7 @@ async function guardarTodo(boton) {
     nombre: document.getElementById('banco-nombre').value,
     email: document.getElementById('banco-email').value
   };
+  config.telefonoAdmin = document.getElementById('telefono-admin').value.trim();
   try {
     var res = await llamarPost({ accion: 'guardar_config', config: config });
     if (res.ok) {

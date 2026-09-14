@@ -64,6 +64,12 @@
        mobile Safari — se activa solo en escritorio/tablet. */
     body { background-attachment: fixed; }
   }
+  /* Dentro de la app (Capacitor = Chromium, no Safari) el mismo fixed sí
+     es confiable, así que se activa siempre ahí aunque la pantalla sea
+     angosta: la imagen queda ocupando toda la pantalla de arriba a
+     abajo, y lo único que se mueve al hacer scroll es el módulo de
+     contenido, nunca el fondo. */
+  body.nativo { background-attachment: fixed; }
   .app {
     width: 100%; max-width: 480px;
     background: rgba(255, 253, 248, 0.86);
@@ -372,7 +378,7 @@
     </div>
 
     <div id="bloque-pago" class="oculto">
-      <label>¿Cómo pagas?</label>
+      <label>¿Cuánto pagas ahora?</label>
       <div class="pago-opt sel" id="opt-sena" onclick="elegirPago(false)">
         <input type="radio" name="pago" checked style="pointer-events:none;">
         <div>
@@ -390,6 +396,23 @@
 
       <div class="aviso-sena" id="texto-sena"></div>
 
+      <label style="margin-top:18px;">¿Con qué pagas?</label>
+      <p class="hint" style="margin:0 0 4px;">Para reservar de verdad tu cupo hace falta pagar ahora — con cualquiera de las dos formas.</p>
+      <div class="pago-opt sel" id="opt-transferencia" onclick="elegirFormaPago('TRANSFERENCIA')">
+        <input type="radio" name="forma-pago" checked style="pointer-events:none;">
+        <div>
+          <div style="font-weight:600;">Transferencia bancaria</div>
+          <div style="font-size:13px;color:var(--text-2);">Transferís y subís el comprobante acá mismo — tenés 15 minutos</div>
+        </div>
+      </div>
+      <div class="pago-opt oculto" id="opt-mercadopago" onclick="elegirFormaPago('MERCADOPAGO')">
+        <input type="radio" name="forma-pago" style="pointer-events:none;">
+        <div>
+          <div style="font-weight:600;">Débito o crédito (Mercado Pago)</div>
+          <div style="font-size:13px;color:var(--text-2);">Pagás online al toque y tu cita queda reservada — tenés 5 minutos</div>
+        </div>
+      </div>
+
       <div class="check-row">
         <input type="checkbox" id="acepta-sena">
         <span>Entiendo y acepto las condiciones de la seña.</span>
@@ -403,12 +426,33 @@
   <!-- RESULTADO -->
   <div class="card oculto" id="paso-resultado">
     <div class="resultado">
-      <div class="ico-ok">✅</div>
+      <div class="ico-ok" id="resultado-ico">✅</div>
       <h2 id="resultado-titulo">Reserva creada</h2>
       <p id="resultado-sub" class="hint"></p>
       <div class="monto" id="resultado-monto"></div>
       <div class="datos-bancarios oculto" id="datos-bancarios"></div>
     </div>
+
+    <!-- Cuenta regresiva del cupo (transferencia: 15 min · Mercado Pago: 5 min) -->
+    <div id="bloque-cuenta-regresiva" class="oculto">
+      <p class="hint" style="text-align:center;margin:10px 0 0;">Tenés <b id="cuenta-regresiva">--:--</b> para completar el pago antes de que se libere el cupo.</p>
+    </div>
+
+    <!-- Transferencia: subir comprobante, se lee solo -->
+    <div id="bloque-subir-comprobante" class="oculto">
+      <label style="margin-top:18px;">Subí el comprobante de tu transferencia</label>
+      <p class="hint" style="margin:0 0 8px;">Foto o captura clara, con el monto bien visible. Lo leemos automático — no se guarda la imagen.</p>
+      <input type="file" id="input-comprobante" accept="image/*" capture="environment">
+      <div id="error-comprobante" class="msg-error oculto"></div>
+      <button class="btn btn-primary" id="btn-subir-comprobante" onclick="subirComprobante()">Confirmar pago</button>
+    </div>
+
+    <!-- Mercado Pago: botón + sondeo de confirmación -->
+    <div id="bloque-mp" class="oculto">
+      <button class="btn btn-primary" id="btn-pagar-mp" onclick="abrirPagoMp()">Pagar con Mercado Pago</button>
+      <p class="hint" id="texto-verificando-mp" style="text-align:center;margin-top:10px;"></p>
+    </div>
+
     <button class="btn btn-ghost" onclick="location.reload()">Hacer otra reserva</button>
   </div>
 
@@ -436,7 +480,7 @@ var API_URL = "https://script.google.com/macros/s/AKfycbxRnyIk695jw8lTVtMVZsqYi-
 // Actualización obligatoria de la app nativa — ver actualizarVersionApp()
 // en el backend. Subir a mano cada vez que se compila y sube un .apk
 // nuevo con cambios de HTML/CSS/JS.
-var APP_VERSION = 5;
+var APP_VERSION = 7;
 var APP_ID = 'paciente';
 var APK_DESCARGA_URL = 'https://github.com/TToLabs/daoma-web/releases/download/latest/daoma-paciente.apk';
 
@@ -448,8 +492,10 @@ var estado = {
   fechaSolicitada: null,
   horaSolicitada: null,
   pagaCompleto: false,
+  formaPago: 'TRANSFERENCIA',
   config: null,
-  precioActual: 0
+  precioActual: 0,
+  reservaId: null
 };
 
 async function llamarGet(params) {
@@ -736,12 +782,19 @@ function mostrarPasoDatos() {
   document.getElementById('paso-datos').classList.remove('oculto');
   document.getElementById('bloque-pago').classList.toggle('oculto', estado.tipo === 'DOMICILIO');
   document.getElementById('bloque-pago-completo-domicilio').classList.toggle('oculto', estado.tipo !== 'DOMICILIO');
+  document.getElementById('opt-mercadopago').classList.toggle('oculto', !(estado.config && estado.config.mercadoPagoDisponible));
 }
 
 function elegirPago(completo) {
   estado.pagaCompleto = completo;
   document.getElementById('opt-sena').classList.toggle('sel', !completo);
   document.getElementById('opt-completo').classList.toggle('sel', completo);
+}
+
+function elegirFormaPago(forma) {
+  estado.formaPago = forma;
+  document.getElementById('opt-transferencia').classList.toggle('sel', forma === 'TRANSFERENCIA');
+  document.getElementById('opt-mercadopago').classList.toggle('sel', forma === 'MERCADOPAGO');
 }
 
 async function confirmarReserva() {
@@ -765,7 +818,7 @@ async function confirmarReserva() {
       accion: 'crear_reserva_clinica',
       nombre: nombre, telefono: telefono, email: email,
       fecha: estado.fecha, hora: estado.hora, servicio_id: estado.servicioId,
-      paga_completo: estado.pagaCompleto, acepta_terminos_sena: true
+      paga_completo: estado.pagaCompleto, forma_pago: estado.formaPago, acepta_terminos_sena: true
     });
   } else {
     var direccion = document.getElementById('direccion').value.trim();
@@ -786,6 +839,7 @@ async function confirmarReserva() {
     return;
   }
 
+  estado.reservaId = res.reserva_id;
   mostrarResultado(res);
 }
 
@@ -822,15 +876,31 @@ function mostrarResultado(res) {
   document.getElementById('paso-direccion').classList.add('oculto');
   document.getElementById('paso-datos').classList.add('oculto');
   document.getElementById('paso-resultado').classList.remove('oculto');
+  document.getElementById('bloque-cuenta-regresiva').classList.add('oculto');
+  document.getElementById('bloque-subir-comprobante').classList.add('oculto');
+  document.getElementById('bloque-mp').classList.add('oculto');
 
   if (estado.tipo === 'DOMICILIO') {
     document.getElementById('resultado-titulo').textContent = 'Solicitud enviada';
     document.getElementById('resultado-sub').textContent = 'El acupunturista va a confirmar el horario a la brevedad. Te contactaremos por teléfono.';
     document.getElementById('resultado-monto').textContent = '';
+    return;
+  }
+
+  var montoAPagar = estado.pagaCompleto ? res.precio_total : res.monto_sena;
+  document.getElementById('resultado-titulo').textContent = 'Falta pagar para reservar';
+  document.getElementById('resultado-monto').textContent = '$' + montoAPagar.toLocaleString('es-CL');
+  iniciarCuentaRegresiva(res.vence_en_minutos);
+
+  if (estado.formaPago === 'MERCADOPAGO') {
+    document.getElementById('resultado-sub').textContent = 'Pagá con débito o crédito para que tu cita quede reservada de verdad.';
+    document.getElementById('bloque-mp').classList.remove('oculto');
+    estado.mpLink = res.mp_link || null;
+    if (!estado.mpLink) {
+      document.getElementById('texto-verificando-mp').textContent = 'No pudimos generar el link de pago. Recargá la página e intentá de nuevo, o elegí transferencia.';
+    }
   } else {
-    document.getElementById('resultado-titulo').textContent = 'Reserva creada';
-    document.getElementById('resultado-sub').textContent = 'Transfiere el monto en los próximos ' + res.vence_en_minutos + ' minutos para asegurar tu cupo.';
-    document.getElementById('resultado-monto').textContent = '$' + res.monto_sena.toLocaleString('es-CL');
+    document.getElementById('resultado-sub').textContent = 'Transferí el monto y subí el comprobante acá abajo para reservar de verdad.';
     var db = estado.config.datosBancarios;
     var cont = document.getElementById('datos-bancarios');
     cont.classList.remove('oculto');
@@ -840,7 +910,114 @@ function mostrarResultado(res) {
       'RUT: ' + (db.rut || '-') + '<br>' +
       'Nombre: ' + (db.nombre || '-') + '<br>' +
       'Email: ' + (db.email || '-');
+    document.getElementById('bloque-subir-comprobante').classList.remove('oculto');
   }
+}
+
+// ------------------------- CUENTA REGRESIVA DEL CUPO -------------------------
+var cuentaRegresivaInterval = null;
+function iniciarCuentaRegresiva(minutos) {
+  document.getElementById('bloque-cuenta-regresiva').classList.remove('oculto');
+  var venceEn = Date.now() + (minutos || 15) * 60 * 1000;
+  if (cuentaRegresivaInterval) clearInterval(cuentaRegresivaInterval);
+  function actualizar() {
+    var restante = Math.max(0, venceEn - Date.now());
+    var min = Math.floor(restante / 60000);
+    var seg = Math.floor((restante % 60000) / 1000);
+    document.getElementById('cuenta-regresiva').textContent = min + ':' + (seg < 10 ? '0' : '') + seg;
+    if (restante <= 0) clearInterval(cuentaRegresivaInterval);
+  }
+  actualizar();
+  cuentaRegresivaInterval = setInterval(actualizar, 1000);
+}
+
+// ------------------------- TRANSFERENCIA: SUBIR COMPROBANTE -------------------------
+function subirComprobante() {
+  var input = document.getElementById('input-comprobante');
+  var errorDiv = document.getElementById('error-comprobante');
+  errorDiv.classList.add('oculto');
+  if (!input.files || !input.files[0]) {
+    errorDiv.textContent = 'Subí una foto o captura del comprobante primero.';
+    errorDiv.classList.remove('oculto');
+    return;
+  }
+  var archivo = input.files[0];
+  var btn = document.getElementById('btn-subir-comprobante');
+  btn.disabled = true; btn.textContent = 'Leyendo comprobante...';
+
+  var lector = new FileReader();
+  lector.onload = async function () {
+    var base64 = lector.result.split(',')[1];
+    var res = await llamarPost({
+      accion: 'declarar_transferencia', reserva_id: estado.reservaId,
+      comprobante_imagen: base64, mime_type: archivo.type
+    });
+    btn.disabled = false; btn.textContent = 'Confirmar pago';
+
+    if (res.ok && res.caso_especial) {
+      mostrarCasoEspecial();
+      return;
+    }
+    if (res.ok) {
+      mostrarPagoConfirmado();
+      return;
+    }
+    errorDiv.textContent = res.error || 'No se pudo confirmar el comprobante.';
+    errorDiv.classList.remove('oculto');
+    if (res.reintentar) input.value = ''; // que suba una foto nueva
+  };
+  lector.readAsDataURL(archivo);
+}
+
+function mostrarPagoConfirmado() {
+  if (cuentaRegresivaInterval) clearInterval(cuentaRegresivaInterval);
+  document.getElementById('bloque-cuenta-regresiva').classList.add('oculto');
+  document.getElementById('bloque-subir-comprobante').classList.add('oculto');
+  document.getElementById('bloque-mp').classList.add('oculto');
+  document.getElementById('resultado-ico').textContent = '✅';
+  document.getElementById('resultado-titulo').textContent = '¡Listo, tu cita quedó reservada!';
+  document.getElementById('resultado-sub').textContent = 'Te esperamos en la fecha y hora que elegiste.';
+}
+
+// El acupunturista no pudo confirmar el comprobante automático 2 veces:
+// el cupo queda congelado (nadie más lo puede tomar) hasta que lo revise
+// a mano — se le avisa por WhatsApp con la foto.
+function mostrarCasoEspecial() {
+  if (cuentaRegresivaInterval) clearInterval(cuentaRegresivaInterval);
+  document.getElementById('bloque-cuenta-regresiva').classList.add('oculto');
+  document.getElementById('bloque-subir-comprobante').classList.add('oculto');
+  document.getElementById('bloque-mp').classList.add('oculto');
+  document.getElementById('resultado-ico').textContent = '⏳';
+  document.getElementById('resultado-titulo').textContent = 'Tu comprobante quedó en revisión';
+  document.getElementById('resultado-sub').textContent = 'Tu cupo está reservado y nadie más lo puede tomar mientras tanto. El acupunturista te confirma apenas lo revise.';
+}
+
+// ------------------------- MERCADO PAGO -------------------------
+function abrirPagoMp() {
+  if (!estado.mpLink) return;
+  if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+    window.open(estado.mpLink, '_system');
+  } else {
+    window.open(estado.mpLink, '_blank');
+  }
+  document.getElementById('texto-verificando-mp').textContent = 'Esperando la confirmación del pago...';
+  sondearPagoMp();
+}
+
+var sondeoMpInterval = null;
+function sondearPagoMp() {
+  if (sondeoMpInterval) clearInterval(sondeoMpInterval);
+  sondeoMpInterval = setInterval(async function () {
+    var res = await llamarGet({ accion: 'estado_reserva', reserva_id: estado.reservaId });
+    if (!res.ok) return;
+    if (res.estado === 'confirmada') {
+      clearInterval(sondeoMpInterval);
+      mostrarPagoConfirmado();
+    } else if (res.estado === 'expirada') {
+      clearInterval(sondeoMpInterval);
+      document.getElementById('texto-verificando-mp').textContent = 'Se venció el tiempo para pagar y el cupo se liberó. Hacé la reserva de nuevo.';
+    }
+  }, 4000);
 }
 
 // ------------------------- ACTUALIZACIÓN OBLIGATORIA -------------------------
@@ -851,16 +1028,17 @@ function mostrarResultado(res) {
 async function chequearActualizacion() {
   if (!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) return;
   try {
-    var r = await fetch(API_URL + '?' + new URLSearchParams({ accion: 'version_app', app: APP_ID }));
+    var url = API_URL + '?' + new URLSearchParams({ accion: 'version_app', app: APP_ID, _: Date.now() });
+    var r = await fetch(url, { cache: 'no-store' });
     var d = await r.json();
-    if (d.ok && d.version > APP_VERSION) mostrarActualizacionObligatoria();
+    if (d.ok && d.version > APP_VERSION) mostrarActualizacionObligatoria(d.version);
   } catch (e) {
     // Sin internet: no bloquea — se vuelve a chequear la próxima vez que
     // abra la app con conexión.
   }
 }
 
-function mostrarActualizacionObligatoria() {
+function mostrarActualizacionObligatoria(versionBackend) {
   if (document.getElementById('overlay-actualizacion')) return;
   var overlay = document.createElement('div');
   overlay.id = 'overlay-actualizacion';
@@ -871,7 +1049,24 @@ function mostrarActualizacionObligatoria() {
       '<p>Para seguir usando DAOMA hace falta actualizar la app primero. Es rápido.</p>' +
       '<button class="btn btn-primary" type="button">Descargar actualización</button>' +
     '</div>';
-  overlay.querySelector('button').onclick = function () { window.open(APK_DESCARGA_URL, '_system'); };
+  var boton = overlay.querySelector('button');
+  boton.onclick = function () {
+    boton.disabled = true;
+    boton.textContent = 'Descargando...';
+    // Descarga e instala dentro de la carpeta privada de la app (nunca
+    // en Descargas) para que no queden copias viejas dando vueltas — ver
+    // ApkInstalador.java. Si por algún motivo el plugin no está
+    // disponible, se cae al método anterior como respaldo.
+    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.ApkInstalador) {
+      window.Capacitor.Plugins.ApkInstalador.descargarEInstalar({ url: APK_DESCARGA_URL })
+        .catch(function () { window.open(APK_DESCARGA_URL, '_system'); })
+        .finally(function () { boton.disabled = false; boton.textContent = 'Descargar actualización'; });
+    } else {
+      window.open(APK_DESCARGA_URL, '_system');
+      boton.disabled = false;
+      boton.textContent = 'Descargar actualización';
+    }
+  };
   document.body.appendChild(overlay);
 }
 chequearActualizacion();
