@@ -151,6 +151,8 @@
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card);
     box-shadow: var(--shadow-sm);
   }
+  /* Ya está dentro de la app: no tiene sentido ofrecer descargarla. */
+  body.nativo .app-download { display: none; }
   .app-download img { width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0; }
   .app-download-texto { flex: 1; min-width: 0; }
   .app-download-titulo { font-weight: 700; font-size: 14.5px; }
@@ -350,7 +352,7 @@
     <label>Dirección</label>
     <input type="text" id="direccion" placeholder="Calle y número">
     <label>Comuna</label>
-    <input type="text" id="comuna" placeholder="Ej: Providencia">
+    <select id="comuna"><option value="">Elige tu comuna...</option></select>
     <div id="error-direccion" class="msg-error oculto"></div>
     <button class="btn btn-primary" onclick="confirmarDireccion()">Siguiente</button>
   </div>
@@ -467,7 +469,10 @@ async function iniciar() {
   pintarInfo();
   pintarTerapias();
   pintarPromos();
+  if (!estado.servicioId && res.config.servicios.length) estado.servicioId = res.config.servicios[0].id;
   pintarServicios();
+  pintarComunas();
+  if (estado.servicioId) mostrarPasoSiguiente();
   document.getElementById('texto-sena').textContent = res.config.textoSena;
   document.getElementById('link-apk-paciente').href =
     'https://github.com/TToLabs/daoma-web/releases/download/latest/daoma-paciente.apk';
@@ -554,6 +559,22 @@ function pintarServicios() {
     div.onclick = function () { estado.servicioId = s.id; pintarServicios(); mostrarPasoSiguiente(); };
     cont.appendChild(div);
   });
+}
+
+// Comuna como selector (no texto libre): evita errores de tipeo que hacían
+// que el backend no reconociera la comuna (normalizarComuna la compara
+// exacta contra config.recargosComuna) y de paso deja clara la lista de
+// zonas con recargo por traslado.
+function pintarComunas() {
+  var sel = document.getElementById('comuna');
+  var recargos = estado.config.recargosComuna || {};
+  var comunas = Object.keys(recargos).sort();
+  sel.innerHTML = '<option value="">Elige tu comuna...</option>' +
+    comunas.map(function (c) {
+      var recargo = recargos[c];
+      var etiqueta = c.toLowerCase().replace(/(^|\s)\S/g, function (l) { return l.toUpperCase(); });
+      return '<option value="' + c + '">' + etiqueta + (recargo ? ' (+$' + recargo.toLocaleString('es-CL') + ' traslado)' : '') + '</option>';
+    }).join('');
 }
 
 function elegirTipo(tipo) {
