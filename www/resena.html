@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DAOMA — Contanos tu experiencia</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#2E4034">
+<link rel="icon" href="img/icon-paciente.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F5F3EE; --surface: #FFFFFF; --border: #E3DDD0;
+    --text: #23241F; --text-2: #5C5A4E; --text-3: #8C8977;
+    --primary: #2E4034; --primary-hover: #22302A; --primary-ink: #FFFFFF;
+    --accent: #B5793B; --accent-soft: #F5E9D8;
+    --danger: #A6402F; --danger-soft: #FAEAE7;
+    --ok: #2E7D46; --ok-soft: #E6F4EA;
+    --shadow-sm: 0 1px 2px rgba(35,36,31,0.05);
+    --r-card: 14px; --r-input: 10px; --r-btn: 12px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    color: var(--text); font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+    font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+    min-height: 100vh; display: flex; justify-content: center;
+    padding: 0 16px calc(40px + env(safe-area-inset-bottom));
+    background-color: var(--bg);
+    background-image: url("img/fondo-index.jpg");
+    background-size: cover; background-position: bottom; background-repeat: no-repeat;
+    background-blend-mode: multiply;
+  }
+  .app {
+    width: 100%; max-width: 480px;
+    background: rgba(255, 253, 248, 0.9);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(220, 201, 160, 0.35);
+    border-radius: 22px; padding: 4px 18px 28px;
+    box-shadow: 0 10px 30px rgba(43, 36, 26, 0.12);
+    margin: 16px 0;
+  }
+  .topbar { padding: calc(20px + env(safe-area-inset-top)) 0 8px; display: flex; align-items: center; gap: 12px; }
+  .brand-logo { width: 42px; height: 42px; flex-shrink: 0; }
+  .brand-name { font-size: 22px; font-weight: 700; color: var(--primary); }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); box-shadow: var(--shadow-sm); padding: 20px; margin-top: 14px; text-align: center; }
+  .card h2 { margin: 0 0 6px; font-size: 19px; }
+  .card p.hint { margin: 0 0 6px; color: var(--text-2); font-size: 14.5px; }
+
+  .estrellas { display: flex; justify-content: center; gap: 6px; margin: 18px 0 6px; }
+  .estrella { font-size: 34px; line-height: 1; cursor: pointer; color: var(--border); background: none; border: none; padding: 2px; transition: transform 0.08s; }
+  .estrella:active { transform: scale(0.9); }
+  .estrella.sel { color: var(--accent); }
+
+  label { display: block; text-align: left; font-size: 13.5px; font-weight: 600; color: var(--text-2); margin: 16px 0 6px; }
+  textarea {
+    width: 100%; padding: 11px 12px; border-radius: var(--r-input); border: 1px solid var(--border);
+    background: var(--surface); color: var(--text); font: inherit; font-size: 15px; resize: vertical; min-height: 90px;
+  }
+  textarea:focus { outline: 2px solid var(--primary); outline-offset: 1px; border-color: var(--primary); }
+
+  .btn { width: 100%; padding: 13px; border-radius: var(--r-btn); border: none; font: inherit; font-weight: 700; font-size: 15.5px; cursor: pointer; margin-top: 18px; }
+  .btn-primary { background: var(--primary); color: var(--primary-ink); }
+  .btn:disabled { opacity: 0.55; cursor: default; }
+
+  .msg { border-radius: var(--r-btn); padding: 10px 12px; font-size: 14px; margin-top: 12px; }
+  .msg-error { background: var(--danger-soft); color: var(--danger); }
+  .ico-ok { font-size: 44px; margin-bottom: 6px; }
+  .oculto { display: none !important; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <img class="brand-logo" src="img/logo.png" alt="">
+    <div class="brand-name">DAOMA</div>
+  </div>
+
+  <div class="card" id="card-cargando">
+    <p class="hint">Cargando...</p>
+  </div>
+
+  <div class="card oculto" id="card-form">
+    <h2 id="titulo-form">¿Cómo fue tu sesión?</h2>
+    <p class="hint">Tu opinión ayuda a otras personas a conocer a DAOMA.</p>
+    <div class="estrellas" id="estrellas">
+      <button type="button" class="estrella" data-val="1">★</button>
+      <button type="button" class="estrella" data-val="2">★</button>
+      <button type="button" class="estrella" data-val="3">★</button>
+      <button type="button" class="estrella" data-val="4">★</button>
+      <button type="button" class="estrella" data-val="5">★</button>
+    </div>
+    <label>Contanos más (opcional)</label>
+    <textarea id="comentario" placeholder="¿Qué destacarías de tu experiencia?"></textarea>
+    <button class="btn btn-primary" id="btn-enviar" onclick="enviar()">Enviar mi opinión</button>
+    <div id="form-error" class="msg msg-error oculto"></div>
+  </div>
+
+  <div class="card oculto" id="card-gracias">
+    <div class="ico-ok">✅</div>
+    <h2>¡Gracias por tu tiempo!</h2>
+    <p class="hint">Tu opinión quedó registrada. El equipo de DAOMA la va a revisar antes de publicarla.</p>
+  </div>
+
+  <div class="card oculto" id="card-no-disponible">
+    <h2 id="titulo-no-disponible">No pudimos cargar esto</h2>
+    <p class="hint" id="texto-no-disponible"></p>
+  </div>
+</div>
+<script>
+// Mismo backend que index.html/admin.html.
+var API_URL = "https://script.google.com/macros/s/AKfycbxRnyIk695jw8lTVtMVZsqYi-7vI9dYR4PmDpcN0mzdRo1CamEjfy4u4F8ReBLrP8xX/exec";
+
+function parametroReserva() {
+  return new URLSearchParams(location.search).get('id');
+}
+
+async function llamarGet(params) {
+  var qs = new URLSearchParams(params).toString();
+  var r = await fetch(API_URL + '?' + qs);
+  return r.json();
+}
+async function llamarPost(body) {
+  var r = await fetch(API_URL, { method: 'POST', body: JSON.stringify(body) });
+  return r.json();
+}
+
+function mostrarSoloTarjeta(id) {
+  ['card-cargando', 'card-form', 'card-gracias', 'card-no-disponible'].forEach(function (cid) {
+    document.getElementById(cid).classList.toggle('oculto', cid !== id);
+  });
+}
+
+function mostrarNoDisponible(titulo, texto) {
+  document.getElementById('titulo-no-disponible').textContent = titulo;
+  document.getElementById('texto-no-disponible').textContent = texto;
+  mostrarSoloTarjeta('card-no-disponible');
+}
+
+var calificacionSel = 0;
+function pintarEstrellas() {
+  document.querySelectorAll('.estrella').forEach(function (b) {
+    b.classList.toggle('sel', parseInt(b.dataset.val, 10) <= calificacionSel);
+  });
+}
+document.querySelectorAll('.estrella').forEach(function (b) {
+  b.addEventListener('click', function () {
+    calificacionSel = parseInt(b.dataset.val, 10);
+    pintarEstrellas();
+  });
+});
+
+async function enviar() {
+  var reservaId = parametroReserva();
+  var boton = document.getElementById('btn-enviar');
+  var errorEl = document.getElementById('form-error');
+  errorEl.classList.add('oculto');
+
+  if (!calificacionSel) {
+    errorEl.textContent = 'Elegí una calificación de 1 a 5 estrellas.';
+    errorEl.classList.remove('oculto');
+    return;
+  }
+
+  boton.disabled = true;
+  boton.textContent = 'Enviando...';
+  var res = await llamarPost({
+    accion: 'enviar_resena', reserva_id: reservaId,
+    calificacion: calificacionSel, comentario: document.getElementById('comentario').value
+  });
+  if (!res.ok) {
+    boton.disabled = false;
+    boton.textContent = 'Enviar mi opinión';
+    errorEl.textContent = res.error || 'No se pudo enviar. Probá de nuevo.';
+    errorEl.classList.remove('oculto');
+    return;
+  }
+  mostrarSoloTarjeta('card-gracias');
+}
+
+async function iniciar() {
+  var reservaId = parametroReserva();
+  if (!reservaId) {
+    mostrarNoDisponible('Falta el link completo', 'Este link debería incluir tu sesión — pedile al acupunturista que te lo reenvíe.');
+    return;
+  }
+  var res = await llamarGet({ accion: 'estado_resena', reserva_id: reservaId });
+  if (!res.ok) {
+    mostrarNoDisponible('No encontramos tu sesión', res.error || 'Revisá que el link esté completo.');
+    return;
+  }
+  if (res.yaEnviada) {
+    mostrarNoDisponible('Ya nos contaste tu experiencia', 'Gracias de nuevo por tu tiempo — ya registramos tu opinión para esta sesión.');
+    return;
+  }
+  if (!res.puedeOpinar) {
+    mostrarNoDisponible('Todavía no está disponible', 'Esto se habilita una vez que tu sesión queda marcada como atendida.');
+    return;
+  }
+  document.getElementById('titulo-form').textContent = '¿Cómo fue tu sesión, ' + res.nombre.split(' ')[0] + '?';
+  mostrarSoloTarjeta('card-form');
+}
+
+iniciar();
+</script>
+</body>
+</html>

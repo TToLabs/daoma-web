@@ -161,6 +161,12 @@
   }
   .footer-legal { text-align: center; color: var(--text-3); font-size: 12px; margin: 20px 0 4px; }
 
+  .testimonio { border-top: 1px solid var(--border); padding: 12px 0; }
+  .testimonio:first-of-type { border-top: none; padding-top: 4px; }
+  .testimonio-estrellas { color: var(--accent); font-size: 16px; letter-spacing: 1px; }
+  .testimonio-comentario { margin: 4px 0; color: var(--text-2); font-size: 14px; font-style: italic; line-height: 1.5; }
+  .testimonio-nombre { font-size: 12.5px; font-weight: 600; color: var(--text-3); }
+
   .resultado { text-align: center; padding: 8px 0; }
   .resultado .ico-ok { font-size: 40px; }
   .resultado h2 { margin: 10px 0 4px; }
@@ -215,6 +221,9 @@
 
   <!-- INFO: contenido editable desde admin.html > Contenido -->
   <div id="info-cards"></div>
+
+  <!-- TESTIMONIOS: solo reseñas que el acupunturista aprobó a mano -->
+  <div id="testimonios"></div>
 
   <!-- PROMOCIONES -->
   <div id="promos"></div>
@@ -361,6 +370,25 @@ async function iniciar() {
   document.getElementById('texto-sena').textContent = res.config.textoSena;
   document.getElementById('link-apk-paciente').href =
     'https://github.com/TToLabs/daoma-web/releases/download/latest/daoma-paciente.apk';
+  pintarTestimonios();
+}
+
+async function pintarTestimonios() {
+  var cont = document.getElementById('testimonios');
+  var res = await llamarGet({ accion: 'resenas_publicas' });
+  if (!res.ok || !res.resenas || !res.resenas.length) return; // sin reseñas aprobadas todavía: no se muestra nada
+  cont.innerHTML =
+    '<div class="card">' +
+      '<h2>Lo que dicen nuestros pacientes</h2>' +
+      res.resenas.map(function (r) {
+        var estrellas = '★★★★★☆☆☆☆☆'.slice(5 - r.calificacion, 10 - r.calificacion);
+        return '<div class="testimonio">' +
+          '<div class="testimonio-estrellas">' + estrellas + '</div>' +
+          (r.comentario ? '<p class="testimonio-comentario">"' + r.comentario + '"</p>' : '') +
+          '<div class="testimonio-nombre">' + r.nombre + '</div>' +
+        '</div>';
+      }).join('') +
+    '</div>';
 }
 
 function pintarInfo() {

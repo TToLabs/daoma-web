@@ -76,7 +76,7 @@
   }
   textarea { resize: vertical; min-height: 50px; }
 
-  .btn { padding: 10px 16px; border-radius: var(--r-btn); border: none; font: inherit; font-weight: 700; font-size: 14.5px; cursor: pointer; transition: transform 0.08s, opacity 0.08s; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+  .btn { display: inline-block; padding: 10px 16px; border-radius: var(--r-btn); border: none; font: inherit; font-weight: 700; font-size: 14.5px; cursor: pointer; text-decoration: none; text-align: center; transition: transform 0.08s, opacity 0.08s; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
   .btn:active { transform: scale(0.97); opacity: 0.85; }
   .btn:disabled { opacity: 0.6; cursor: default; transform: none; }
   .btn-primary { background: var(--primary); color: var(--primary-ink); }
@@ -248,6 +248,10 @@
     <button class="sub-tab activo" data-vista="agenda" onclick="cambiarVista('agenda')">Reservas</button>
     <button class="sub-tab" data-vista="pendientes" onclick="cambiarVista('pendientes')">Pendientes</button>
   </div>
+  <div class="sub-tabs oculto" data-cat="clientes">
+    <button class="sub-tab activo" data-vista="clientes" onclick="cambiarVista('clientes')">Directorio</button>
+    <button class="sub-tab" data-vista="resenas" onclick="cambiarVista('resenas')">Reseñas</button>
+  </div>
   <div class="sub-tabs oculto" data-cat="precios">
     <button class="sub-tab activo" data-vista="servicios" onclick="cambiarVista('servicios')">Servicios</button>
     <button class="sub-tab" data-vista="promos" onclick="cambiarVista('promos')">Promociones</button>
@@ -282,6 +286,14 @@
     <p class="hint" style="margin-top:8px;">Directorio armado a partir de las reservas — agrupa todas las sesiones de cada persona por teléfono.</p>
     <button class="btn btn-ghost btn-sm" onclick="cargarClientes()">↻ Actualizar</button>
     <div id="lista-clientes"></div>
+  </div>
+
+  <!-- RESEÑAS: moderación manual — nunca se publica un comentario sin
+       aprobarlo antes. Las aprobadas se muestran en index.html. -->
+  <div class="vista" id="vista-resenas">
+    <p class="hint" style="margin-top:8px;">Las opiniones que envían los pacientes (link por WhatsApp desde "Pedir reseña") quedan acá hasta que las apruebes o rechaces.</p>
+    <button class="btn btn-ghost btn-sm" onclick="cargarResenas()">↻ Actualizar</button>
+    <div id="lista-resenas"></div>
   </div>
 
   <!-- HORARIOS -->
@@ -394,6 +406,9 @@
 // CONFIGURACIÓN — misma URL que index.html.
 // ========================================================================
 var API_URL = "https://script.google.com/macros/s/AKfycbxRnyIk695jw8lTVtMVZsqYi-7vI9dYR4PmDpcN0mzdRo1CamEjfy4u4F8ReBLrP8xX/exec";
+// Espejo público donde vive resena.html — el mismo link que se manda por
+// WhatsApp para pedir la opinión del paciente.
+var RESENA_BASE_URL = "https://ttolabs.github.io/daoma-web/www/resena.html";
 
 var USUARIO = localStorage.getItem('daoma_usuario') || '';
 var PIN = localStorage.getItem('daoma_pin') || '';
@@ -466,7 +481,7 @@ if (USUARIO && PIN) entrarConCredenciales().catch(function(){});
 // no necesita fila de sub-pestañas propia.
 var CATEGORIAS = {
   agenda: ['agenda', 'pendientes'],
-  clientes: ['clientes'],
+  clientes: ['clientes', 'resenas'],
   precios: ['servicios', 'promos'],
   web: ['contenido'],
   ajustes: ['horarios', 'config']
@@ -482,6 +497,7 @@ function cambiarVista(v) {
   document.querySelectorAll('.sub-tabs').forEach(function (el) { el.classList.toggle('oculto', el.dataset.cat !== cat); });
   document.querySelectorAll('.sub-tab').forEach(function (b) { b.classList.toggle('activo', b.dataset.vista === v); });
   if (v === 'clientes') cargarClientes();
+  if (v === 'resenas') cargarResenas();
 }
 // Desde el menú se entra siempre a la primera vista de la categoría.
 function irACategoria(cat) {
@@ -566,7 +582,30 @@ function renderReserva(r) {
     var b3 = boton('Marcar atendida', 'btn-ok', function () { accionSimple('marcar_atendida', r.reserva_id); });
     var b4 = boton('No asistió', 'btn-danger', function () { accionSimple('marcar_no_asistio', r.reserva_id); });
     acciones.appendChild(b3); acciones.appendChild(b4);
+    // Manual, mismo patrón que BANMEDICA (wa.me, sin API): sin conexión
+    // real a WhatsApp, no hay forma de mandarlo solo — el acupunturista
+    // toca el link y confirma el envío desde su teléfono. Solo el día de
+    // la cita, no tiene sentido "recordar" con semanas de anticipación.
+    if (r.fecha === hoyISO()) {
+      var btnRecordar = document.createElement('a');
+      btnRecordar.className = 'btn btn-sm btn-whatsapp';
+      btnRecordar.textContent = 'Recordar por WhatsApp';
+      btnRecordar.href = linkRecordatorioWhatsApp(r);
+      btnRecordar.target = '_blank'; btnRecordar.rel = 'noopener';
+      acciones.appendChild(btnRecordar);
+    }
     div.appendChild(acciones);
+  }
+  if (r.estado === 'atendida') {
+    var accionesResena = document.createElement('div');
+    accionesResena.className = 'reserva-acciones';
+    var btnResena = document.createElement('a');
+    btnResena.className = 'btn btn-sm btn-whatsapp';
+    btnResena.textContent = 'Pedir reseña';
+    btnResena.href = linkPedirResenaWhatsApp(r);
+    btnResena.target = '_blank'; btnResena.rel = 'noopener';
+    accionesResena.appendChild(btnResena);
+    div.appendChild(accionesResena);
   }
   if (r.estado === 'no_asistio' || r.estado === 'cancelada' || r.estado === 'pendiente_recuperar') {
     var form2 = document.createElement('div');
@@ -587,6 +626,26 @@ function renderReserva(r) {
     }
   }
   return div;
+}
+
+function hoyISO() {
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function linkRecordatorioWhatsApp(r) {
+  var tel = limpiarTelefono(r.telefono).replace(/^\+/, '');
+  var mensaje = 'Hola ' + (r.nombre || '').split(' ')[0] + '! Te escribo de DAOMA para recordarte tu sesión de hoy ' +
+    r.fecha + ' a las ' + r.hora + (r.tipo === 'DOMICILIO' ? (' en ' + r.direccion + ', ' + r.comuna) : ' en la clínica') + '. ¡Te esperamos!';
+  return 'https://wa.me/' + tel + '?text=' + encodeURIComponent(mensaje);
+}
+
+function linkPedirResenaWhatsApp(r) {
+  var tel = limpiarTelefono(r.telefono).replace(/^\+/, '');
+  var link = RESENA_BASE_URL + '?id=' + encodeURIComponent(r.reserva_id);
+  var mensaje = 'Hola ' + (r.nombre || '').split(' ')[0] + '! Gracias por tu sesión en DAOMA. ' +
+    'Si tenés un minuto, nos ayudaría mucho que nos cuentes cómo te fue: ' + link;
+  return 'https://wa.me/' + tel + '?text=' + encodeURIComponent(mensaje);
 }
 
 function boton(texto, clase, onclick) {
@@ -766,6 +825,47 @@ async function agregarHistorialCliente(c) {
   }
   var cont = document.getElementById('historial-' + telLimpio);
   await pintarHistorial(c, cont);
+}
+
+/* ------------------------- MODERACIÓN DE RESEÑAS ------------------------- */
+async function cargarResenas() {
+  var cont = document.getElementById('lista-resenas');
+  cont.innerHTML = 'Cargando...';
+  var res = await llamarGet({ accion: 'resenas_admin' });
+  if (!res.ok || !res.resenas) { cont.innerHTML = '<p>Error: ' + (res.error || 'no se pudo cargar') + '</p>'; return; }
+  cont.innerHTML = '';
+  if (!res.resenas.length) { cont.innerHTML = '<p style="color:var(--text-2);margin-top:14px;">Todavía no llegó ninguna reseña.</p>'; return; }
+  res.resenas.forEach(function (r) { cont.appendChild(renderResena(r)); });
+}
+
+function renderResena(r) {
+  var div = document.createElement('div');
+  div.className = 'reserva';
+  var estrellas = '★★★★★☆☆☆☆☆'.slice(5 - r.calificacion, 10 - r.calificacion);
+  div.innerHTML =
+    '<div class="reserva-top">' +
+      '<div>' +
+        '<div class="reserva-nombre">' + r.nombre + '</div>' +
+        '<div class="reserva-detalle" style="color:var(--accent);font-size:16px;letter-spacing:1px;">' + estrellas + '</div>' +
+        (r.comentario ? '<div class="reserva-detalle">"' + r.comentario + '"</div>' : '<div class="reserva-detalle" style="color:var(--text-3);">Sin comentario escrito.</div>') +
+      '</div>' +
+      '<span class="estado-pill estado-' + (r.estado === 'aprobada' ? 'confirmada' : r.estado === 'rechazada' ? 'cancelada' : 'pendiente_pago') + '">' + r.estado + '</span>' +
+    '</div>';
+
+  if (r.estado === 'pendiente') {
+    var acciones = document.createElement('div');
+    acciones.className = 'reserva-acciones';
+    acciones.appendChild(boton('Aprobar y publicar', 'btn-ok', function () { moderarResenaAdmin(r.resena_id, 'aprobada'); }));
+    acciones.appendChild(boton('Rechazar', 'btn-danger', function () { moderarResenaAdmin(r.resena_id, 'rechazada'); }));
+    div.appendChild(acciones);
+  }
+  return div;
+}
+
+async function moderarResenaAdmin(resenaId, nuevoEstado) {
+  var res = await llamarPost({ accion: 'moderar_resena', resena_id: resenaId, estado: nuevoEstado });
+  if (!res.ok) { alert(res.error); return; }
+  cargarResenas();
 }
 
 /* ------------------------- CONFIGURACIÓN ------------------------- */
