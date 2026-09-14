@@ -328,7 +328,7 @@
     </div>
     <div class="card">
       <h2>Bloqueos puntuales</h2>
-      <p style="color:var(--text-2);font-size:13.5px;margin:0 0 8px;">Vacaciones o días completos sin atención.</p>
+      <p style="color:var(--text-2);font-size:13.5px;margin:0 0 8px;">Vacaciones o días sin atención. Elegí si el bloqueo es personal (cierra todo), solo clínica o solo domicilio.</p>
       <div id="lista-bloqueos"></div>
       <button class="btn btn-ghost btn-sm" style="margin-top:10px;" onclick="agregarBloqueo()">+ Agregar bloqueo</button>
     </div>
@@ -436,7 +436,7 @@ var RESENA_BASE_URL = "https://ttolabs.github.io/daoma-web/www/resena.html";
 // Actualización obligatoria de la app nativa — ver actualizarVersionApp()
 // en el backend. Subir a mano cada vez que se compila y sube un .apk
 // nuevo con cambios de HTML/CSS/JS.
-var APP_VERSION = 2;
+var APP_VERSION = 3;
 var APP_ID = 'admin';
 var APK_DESCARGA_URL = 'https://github.com/TToLabs/daoma-web/releases/download/latest/daoma-admin.apk';
 
@@ -1065,12 +1065,19 @@ function pintarBloqueos() {
   config.bloqueos.forEach(function (b, i) {
     var div = document.createElement('div');
     div.className = 'repetible';
+    var tipoActual = b.tipo || 'TODO';
     div.innerHTML =
       '<div class="repetible-row"><input type="date" value="' + b.desde + '"><input type="date" value="' + b.hasta + '"></div>' +
+      '<select style="margin-top:6px;">' +
+        '<option value="TODO"' + (tipoActual === 'TODO' ? ' selected' : '') + '>Personal (bloquea clínica y domicilio)</option>' +
+        '<option value="CLINICA"' + (tipoActual === 'CLINICA' ? ' selected' : '') + '>Solo clínica (domicilio sigue disponible)</option>' +
+        '<option value="DOMICILIO"' + (tipoActual === 'DOMICILIO' ? ' selected' : '') + '>Solo domicilio (clínica sigue disponible)</option>' +
+      '</select>' +
       '<input type="text" placeholder="Motivo (opcional)" value="' + (b.motivo || '') + '" style="margin-top:6px;">';
     div.children[0].children[0].onchange = function () { b.desde = this.value; };
     div.children[0].children[1].onchange = function () { b.hasta = this.value; };
-    div.children[1].onchange = function () { b.motivo = this.value; };
+    div.children[1].onchange = function () { b.tipo = this.value; };
+    div.children[2].onchange = function () { b.motivo = this.value; };
     var quitar = document.createElement('span');
     quitar.className = 'quitar'; quitar.textContent = 'Quitar bloqueo';
     quitar.onclick = function () { config.bloqueos.splice(i, 1); pintarBloqueos(); };
@@ -1079,7 +1086,7 @@ function pintarBloqueos() {
   });
 }
 function agregarBloqueo() {
-  config.bloqueos.push({ desde: '', hasta: '', motivo: '' });
+  config.bloqueos.push({ desde: '', hasta: '', tipo: 'TODO', motivo: '' });
   pintarBloqueos();
 }
 
