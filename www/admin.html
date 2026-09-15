@@ -506,7 +506,7 @@ var RESENA_BASE_URL = "https://ttolabs.github.io/daoma-web/www/resena.html";
 // Actualización obligatoria de la app nativa — ver actualizarVersionApp()
 // en el backend. Subir a mano cada vez que se compila y sube un .apk
 // nuevo con cambios de HTML/CSS/JS.
-var APP_VERSION = 11;
+var APP_VERSION = 12;
 var APP_ID = 'admin';
 var APK_DESCARGA_URL = 'https://github.com/TToLabs/daoma-web/releases/download/latest/daoma-admin.apk';
 
@@ -578,7 +578,22 @@ async function entrarConCredenciales() {
   // esto termina — si no se espera, la pantalla se cierra con la agenda
   // todavía en blanco (el módulo "no actualizado" que reportó Alberto).
   await cargarReservas();
+  pedirPermisoNotificaciones();
   return res;
+}
+
+// Pide el permiso de notificaciones push al usuario — regla fija para
+// todas las apps (ver CLAUDE.md). Se llama después de que ya entró al
+// panel, nunca antes ni bloqueando el splash. Sin backend de push
+// todavía — deja el permiso listo para cuando se agregue.
+async function pedirPermisoNotificaciones() {
+  if (!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) return;
+  try {
+    var LN = window.Capacitor.Plugins.LocalNotifications;
+    if (!LN) return;
+    var estado = await LN.checkPermissions();
+    if (estado.display !== 'granted') await LN.requestPermissions();
+  } catch (e) { /* no bloquea el arranque si falla */ }
 }
 
 async function login() {

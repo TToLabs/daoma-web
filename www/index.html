@@ -521,7 +521,7 @@ var API_URL = "https://script.google.com/macros/s/AKfycbxRnyIk695jw8lTVtMVZsqYi-
 // Actualización obligatoria de la app nativa — ver actualizarVersionApp()
 // en el backend. Subir a mano cada vez que se compila y sube un .apk
 // nuevo con cambios de HTML/CSS/JS.
-var APP_VERSION = 11;
+var APP_VERSION = 12;
 var APP_ID = 'paciente';
 var APK_DESCARGA_URL = 'https://github.com/TToLabs/daoma-web/releases/download/latest/daoma-paciente.apk';
 
@@ -605,6 +605,23 @@ async function iniciar() {
   document.getElementById('link-apk-paciente').href =
     'https://github.com/TToLabs/daoma-web/releases/download/latest/daoma-paciente.apk';
   pintarTestimonios();
+  pedirPermisoNotificaciones();
+}
+
+// Pide el permiso de notificaciones push al usuario — regla fija para
+// todas las apps (ver CLAUDE.md). Se llama después de que la app ya
+// terminó de cargar, nunca antes ni bloqueando el splash: pedirlo sin
+// contexto genera más rechazos que pedirlo cuando el usuario ya vio algo
+// de valor. Sin backend de push todavía — deja el permiso listo para
+// cuando se agregue (recordatorio de cita, aviso de pago, etc.).
+async function pedirPermisoNotificaciones() {
+  if (!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) return;
+  try {
+    var LN = window.Capacitor.Plugins.LocalNotifications;
+    if (!LN) return;
+    var estado = await LN.checkPermissions();
+    if (estado.display !== 'granted') await LN.requestPermissions();
+  } catch (e) { /* no bloquea el arranque si falla */ }
 }
 
 async function pintarTestimonios() {
