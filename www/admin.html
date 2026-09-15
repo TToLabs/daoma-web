@@ -506,7 +506,7 @@ var RESENA_BASE_URL = "https://ttolabs.github.io/daoma-web/www/resena.html";
 // Actualización obligatoria de la app nativa — ver actualizarVersionApp()
 // en el backend. Subir a mano cada vez que se compila y sube un .apk
 // nuevo con cambios de HTML/CSS/JS.
-var APP_VERSION = 10;
+var APP_VERSION = 11;
 var APP_ID = 'admin';
 var APK_DESCARGA_URL = 'https://github.com/TToLabs/daoma-web/releases/download/latest/daoma-admin.apk';
 
@@ -573,7 +573,11 @@ async function entrarConCredenciales() {
   var nav = document.getElementById('nav-categorias');
   if (nav) nav.classList.remove('oculto');
   pintarConfig();
-  cargarReservas();
+  // Se espera a que carguen las reservas ANTES de devolver el control:
+  // la pantalla de carga existe justamente para tapar la app mientras
+  // esto termina — si no se espera, la pantalla se cierra con la agenda
+  // todavía en blanco (el módulo "no actualizado" que reportó Alberto).
+  await cargarReservas();
   return res;
 }
 
@@ -610,7 +614,15 @@ if (USUARIO && PIN) {
   var pantallaAdmin = document.getElementById('pantalla-carga-admin');
   pantallaAdmin.classList.remove('oculto');
   entrarConCredenciales().then(function (res) {
-    if (res.ok) return;
+    if (res.ok) {
+      // Bug real encontrado: acá faltaba ocultar la pantalla de carga en
+      // el camino exitoso — se quedaba tapando el panel para siempre
+      // (z-index 9998, position fixed), aunque los datos ya habían
+      // cargado abajo. Se veía como "tarda demasiado" sin ningún aviso.
+      pantallaAdmin.classList.add('oculta');
+      setTimeout(function () { pantallaAdmin.remove(); }, 400);
+      return;
+    }
     if (res.error === 'sin conexión con el servidor') {
       pantallaAdmin.innerHTML =
         '<img src="img/logo.png" alt="">' +
