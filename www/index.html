@@ -141,6 +141,11 @@
 
   .pago-opt { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: var(--r-btn); margin-top: 8px; cursor: pointer; }
   .pago-opt.sel { border-color: var(--primary); background: var(--primary-soft); }
+  /* El radio hereda "width:100%" de la regla global de inputs y se estira
+     a todo el ancho de la tarjeta, empujando el texto — mismo bug que ya
+     se había arreglado en .check-row pero nunca se aplicó acá. */
+  .pago-opt input[type="radio"] { width: 18px; height: 18px; flex: none; }
+  .pago-opt > div:last-child { flex: 1; min-width: 0; }
 
   .aviso-sena { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-btn); padding: 12px; font-size: 13.5px; color: var(--text-2); margin-top: 14px; }
   .check-row { display: flex; align-items: flex-start; gap: 10px; margin-top: 12px; }
