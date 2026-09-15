@@ -546,7 +546,11 @@ var estado = {
 // Alberto en vivo (14-sep-2026): pantalla vacía, sin error, sin reintento.
 function conTimeout(promesaFetch, ms) {
   var controlador = new AbortController();
-  var vencido = setTimeout(function () { controlador.abort(); }, ms || 12000);
+  // 25s, no 12s: medido en vivo (15-sep-2026) que un arranque en frío de
+  // Apps Script (cuando no se usó hace un rato) puede tardar hasta ~16s
+  // en el primer pedido — con 12s se abortaba ANTES de que terminara y
+  // encima se reintentaba, empeorando la demora real en vez de arreglarla.
+  var vencido = setTimeout(function () { controlador.abort(); }, ms || 25000);
   return promesaFetch(controlador.signal).finally(function () { clearTimeout(vencido); });
 }
 async function llamarGet(params) {
