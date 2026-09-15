@@ -401,12 +401,12 @@
   <!-- CATEGORÍA: AGENDAR -->
   <div class="vista-paciente activa" id="vista-p-agendar">
 
-  <!-- Para reservar hace falta cuenta (mismo criterio que Rumbo con el
-       pasajero) — sin sesión, se muestra este aviso en vez del flujo. -->
+  <!-- La cuenta es OPCIONAL para reservar (decisión de Alberto,
+       2026-09-15: "el paciente igual puede solicitar turnos sin tener
+       cuenta, ahí se le sugiere crear su cuenta para tener acceso a su
+       historial") — este aviso es solo una sugerencia, nunca bloquea. -->
   <div class="card oculto" id="aviso-login-agendar">
-    <h2>Iniciá sesión para reservar</h2>
-    <p class="hint">Necesitás una cuenta para agendar tu sesión — así queda tu historial de atenciones y pagos guardado.</p>
-    <button class="btn btn-primary" onclick="irACategoriaPaciente('cuenta')">Ir a Mi cuenta</button>
+    <p class="hint" style="margin:0;">💡 ¿Ya reservaste antes? <a href="#" onclick="irACategoriaPaciente('cuenta');return false;">Iniciá sesión</a> para no volver a escribir tus datos y ver tu historial. También podés reservar sin cuenta.</p>
   </div>
 
   <div id="flujo-reserva">
@@ -460,8 +460,23 @@
   <!-- PASO 3: datos y pago -->
   <div class="card oculto" id="paso-datos">
     <h2>Tus datos</h2>
-    <p class="hint" id="resumen-paciente"></p>
-    <p class="hint" style="margin-top:-8px;">¿No son tus datos? Cambialos en <a href="#" onclick="irACategoriaPaciente('cuenta');return false;">Mi cuenta</a> antes de reservar.</p>
+
+    <!-- Con sesión: resumen de la cuenta, sin inputs. -->
+    <div id="datos-con-sesion" class="oculto">
+      <p class="hint" id="resumen-paciente"></p>
+      <p class="hint" style="margin-top:-8px;">¿No son tus datos? Cambialos en <a href="#" onclick="irACategoriaPaciente('cuenta');return false;">Mi cuenta</a> antes de reservar.</p>
+    </div>
+
+    <!-- Sin sesión: se piden sueltos, como siempre — la cuenta es sugerida, no obligatoria. -->
+    <div id="datos-sin-sesion" class="oculto">
+      <label>Nombre completo</label>
+      <input type="text" id="nombre">
+      <label>Teléfono (WhatsApp)</label>
+      <input type="tel" id="telefono" placeholder="+56 9 ...">
+      <label>Email (opcional)</label>
+      <input type="email" id="email">
+      <p class="hint">💡 ¿Querés guardar tu historial? <a href="#" onclick="irACategoriaPaciente('cuenta');return false;">Creá tu cuenta</a> antes de confirmar.</p>
+    </div>
 
     <div id="bloque-pago-completo-domicilio" class="oculto">
       <p class="hint" style="margin-top:14px;">Tu solicitud queda pendiente hasta que el acupunturista confirme el horario. Ahí te pedimos el pago.</p>
@@ -762,7 +777,7 @@ function actualizarUiCuenta() {
   document.getElementById('bloque-historial').classList.toggle('oculto', !logueado);
   document.getElementById('btn-cerrar-sesion').classList.toggle('oculto', !logueado);
   document.getElementById('aviso-login-agendar').classList.toggle('oculto', logueado);
-  document.getElementById('flujo-reserva').classList.toggle('oculto', !logueado);
+  actualizarBloqueDatosReserva();
   if (logueado) {
     document.getElementById('cuenta-nombre').value = estado.paciente.nombre || '';
     document.getElementById('cuenta-telefono').value = estado.paciente.telefono || '';
@@ -1151,10 +1166,20 @@ function mostrarPasoDatos() {
   document.getElementById('bloque-pago').classList.toggle('oculto', estado.tipo === 'DOMICILIO');
   document.getElementById('bloque-pago-completo-domicilio').classList.toggle('oculto', estado.tipo !== 'DOMICILIO');
   document.getElementById('opt-mercadopago').classList.toggle('oculto', !(estado.config && estado.config.mercadoPagoDisponible));
+  actualizarBloqueDatosReserva();
+}
+
+// La cuenta es opcional: logueado se muestra un resumen de sus datos,
+// sin sesión se piden nombre/teléfono/email sueltos como siempre, con
+// una sugerencia (no obligación) de crear cuenta.
+function actualizarBloqueDatosReserva() {
   var p = estado.paciente;
-  document.getElementById('resumen-paciente').textContent = p
-    ? ('Reservando para ' + p.nombre + ' · ' + p.telefono + (p.email ? (' · ' + p.email) : ''))
-    : '';
+  document.getElementById('datos-con-sesion').classList.toggle('oculto', !p);
+  document.getElementById('datos-sin-sesion').classList.toggle('oculto', !!p);
+  if (p) {
+    document.getElementById('resumen-paciente').textContent =
+      'Reservando para ' + p.nombre + ' · ' + p.telefono + (p.email ? (' · ' + p.email) : '');
+  }
 }
 
 function elegirPago(completo) {
@@ -1173,7 +1198,15 @@ async function confirmarReserva() {
   var errorDiv = document.getElementById('error-datos');
   errorDiv.classList.add('oculto');
 
-  if (!estado.pacienteToken) { irACategoriaPaciente('cuenta'); return; }
+  // La cuenta es opcional: logueado manda el token, sin sesión se validan
+  // y mandan nombre/teléfono sueltos como siempre.
+  var nombre = '', telefono = '', email = '';
+  if (!estado.pacienteToken) {
+    nombre = document.getElementById('nombre').value.trim();
+    telefono = document.getElementById('telefono').value.trim();
+    email = document.getElementById('email').value.trim();
+    if (!nombre || !telefono) { mostrarError('Falta tu nombre o teléfono.'); return; }
+  }
   if (estado.tipo === 'CLINICA' && !document.getElementById('acepta-sena').checked) {
     mostrarError('Tenés que aceptar las condiciones de la seña.'); return;
   }
@@ -1185,6 +1218,7 @@ async function confirmarReserva() {
   if (estado.tipo === 'CLINICA') {
     res = await llamarPost({
       accion: 'crear_reserva_clinica', paciente_token: estado.pacienteToken,
+      nombre: nombre, telefono: telefono, email: email,
       fecha: estado.fecha, hora: estado.hora, servicio_id: estado.servicioId,
       paga_completo: estado.pagaCompleto, forma_pago: estado.formaPago, acepta_terminos_sena: true
     });
@@ -1193,12 +1227,12 @@ async function confirmarReserva() {
     var comuna = document.getElementById('comuna').value.trim();
     res = await llamarPost({
       accion: 'crear_solicitud_domicilio', paciente_token: estado.pacienteToken,
+      nombre: nombre, telefono: telefono, email: email,
       direccion: direccion, comuna: comuna,
       fecha_solicitada: estado.fechaSolicitada, hora_solicitada: estado.horaSolicitada, servicio_id: estado.servicioId,
       acepta_terminos_sena: true
     });
   }
-  if (res.requiere_login) { estado.pacienteToken = null; borrarLocal('daoma_paciente_token'); irACategoriaPaciente('cuenta'); return; }
 
   btn.disabled = false; btn.textContent = 'Confirmar reserva';
   if (!res.ok) {
