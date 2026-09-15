@@ -209,15 +209,15 @@
   #pantalla-carga {
     position: fixed; inset: 0; z-index: 9998; display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 16px; padding: 32px;
-    background: var(--primary); color: #FFFFFF; text-align: center;
+    background: var(--bg); color: var(--text); text-align: center;
     transition: opacity 0.35s ease;
   }
   #pantalla-carga.oculta { opacity: 0; pointer-events: none; }
-  #pantalla-carga img { width: 130px; height: 130px; filter: drop-shadow(0 8px 24px rgba(0,0,0,0.35)); animation: cargaLatido 1.6s ease-in-out infinite; }
-  #pantalla-carga h1 { font-size: 27px; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
-  #pantalla-carga p { font-size: 17px; line-height: 1.5; max-width: 310px; margin: 0; opacity: 0.92; }
+  #pantalla-carga img { width: 130px; height: 130px; filter: drop-shadow(0 8px 24px rgba(35,36,31,0.18)); animation: cargaLatido 1.6s ease-in-out infinite; }
+  #pantalla-carga h1 { font-size: 27px; font-weight: 700; letter-spacing: -0.01em; margin: 0; color: var(--primary); }
+  #pantalla-carga p { font-size: 17px; line-height: 1.5; max-width: 310px; margin: 0; color: var(--text-2); }
   #pantalla-carga .puntos { display: flex; gap: 6px; margin-top: 2px; }
-  #pantalla-carga .puntos span { width: 8px; height: 8px; border-radius: 50%; background: #FFFFFF; opacity: 0.35; animation: cargaPunto 1.2s infinite; }
+  #pantalla-carga .puntos span { width: 8px; height: 8px; border-radius: 50%; background: var(--primary); opacity: 0.35; animation: cargaPunto 1.2s infinite; }
   #pantalla-carga .puntos span:nth-child(2) { animation-delay: 0.2s; }
   #pantalla-carga .puntos span:nth-child(3) { animation-delay: 0.4s; }
   #pantalla-carga .btn { max-width: 260px; margin-top: 6px; }
@@ -521,7 +521,7 @@ var API_URL = "https://script.google.com/macros/s/AKfycbxRnyIk695jw8lTVtMVZsqYi-
 // Actualización obligatoria de la app nativa — ver actualizarVersionApp()
 // en el backend. Subir a mano cada vez que se compila y sube un .apk
 // nuevo con cambios de HTML/CSS/JS.
-var APP_VERSION = 9;
+var APP_VERSION = 10;
 var APP_ID = 'paciente';
 var APK_DESCARGA_URL = 'https://github.com/TToLabs/daoma-web/releases/download/latest/daoma-paciente.apk';
 
