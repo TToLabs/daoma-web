@@ -211,6 +211,18 @@
   }
   @keyframes girar { to { transform: rotate(360deg); } }
 
+  /* Splash de pantalla completa al arrancar — pantalla propia, ANTES de
+     entrar a la app (pedido de Alberto, 2026-09-15), no una tarjeta
+     adentro del contenido. */
+  #pantalla-carga {
+    position: fixed; inset: 0; z-index: 9998; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 20px; text-align: center;
+  }
+  #pantalla-carga img { width: 110px; height: 110px; margin-bottom: 18px; }
+  #pantalla-carga p { color: var(--text-2); font-size: 15px; max-width: 300px; margin: 0; line-height: 1.5; }
+  #pantalla-carga .btn { max-width: 260px; margin-top: 18px; }
+
   /* ---------- Info sobre acupuntura ---------- */
   .info-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); box-shadow: var(--shadow-sm); margin-top: 16px; overflow: hidden; }
   .info-toggle { width: 100%; padding: 16px 18px 4px; font: inherit; text-align: left; }
@@ -285,6 +297,18 @@
   <symbol id="i-calendario" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
 </svg>
 
+<!-- Splash de pantalla completa mientras carga config_publica — vive
+     FUERA de .app (que tiene backdrop-filter, y eso crea su propio
+     "containing block" para position:fixed, el mismo problema real que
+     ya resolvimos con el menú de categorías). Se borra sola en iniciar()
+     apenas la carga sale bien; si falla, muestra el botón Reintentar acá
+     mismo, sin dejar ver el resto de la app por debajo. -->
+<div id="pantalla-carga">
+  <img src="img/logo.png" alt="DAOMA">
+  <div class="spinner"></div>
+  <p>Ingresando a DAOMA, sistema de agenda de citas para Acupuntura Integral...</p>
+</div>
+
 <div class="app">
   <div class="topbar">
     <img class="brand-logo" src="img/logo.png" alt="">
@@ -313,15 +337,6 @@
       Agendar
     </button>
   </nav>
-
-  <!-- Se ve mientras carga config_publica — sin esto, si la red falla
-       justo al abrir la app, queda todo en blanco sin ningún aviso. Se
-       borra sola en iniciar() apenas la carga sale bien. -->
-  <div class="card" id="pantalla-carga" style="text-align:center;padding:32px 18px;">
-    <img src="img/logo.png" alt="DAOMA" style="width:96px;height:96px;margin-bottom:14px;">
-    <div class="spinner"></div>
-    <p class="hint" style="margin:0;">Ingresando a DAOMA, sistema de agenda de citas para Acupuntura Integral...</p>
-  </div>
 
   <!-- CATEGORÍA: INFO -->
   <div class="vista-paciente" id="vista-p-info">
@@ -561,8 +576,8 @@ async function iniciar() {
   if (!res.ok) {
     if (pantallaCarga) {
       pantallaCarga.innerHTML =
-        '<img src="img/logo.png" alt="DAOMA" style="width:96px;height:96px;margin-bottom:14px;">' +
-        '<p class="hint" style="margin:0;">No pudimos cargar DAOMA — revisá tu conexión.</p>' +
+        '<img src="img/logo.png" alt="DAOMA">' +
+        '<p>No pudimos cargar DAOMA — revisá tu conexión.</p>' +
         '<button class="btn btn-primary" onclick="location.reload()">Reintentar</button>';
     }
     return;

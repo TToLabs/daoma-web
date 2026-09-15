@@ -184,6 +184,16 @@
     border-radius: 50%; animation: girar 0.8s linear infinite;
   }
   @keyframes girar { to { transform: rotate(360deg); } }
+  /* Splash de pantalla completa al arrancar — pantalla propia, ANTES de
+     entrar al panel (pedido de Alberto, 2026-09-15). */
+  #pantalla-carga-admin {
+    position: fixed; inset: 0; z-index: 9998; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 20px; text-align: center;
+  }
+  #pantalla-carga-admin img { width: 110px; height: 110px; margin-bottom: 18px; }
+  #pantalla-carga-admin p { color: var(--text-2); font-size: 15px; max-width: 300px; margin: 0; line-height: 1.5; }
+  #pantalla-carga-admin .btn { max-width: 260px; margin-top: 18px; }
   .topbar .brand-logo { width: 32px; height: 32px; }
   .msg { border-radius: var(--r-btn); padding: 10px 12px; font-size: 14px; margin-top: 10px; }
   .msg-error { background: var(--danger-soft); color: var(--danger); }
@@ -234,11 +244,12 @@
 <!-- Se ve mientras se intenta el login automático (usuario/contraseña ya
      guardados) — sin esto, si la red falla justo ahí, la pantalla queda
      en blanco sin ningún aviso (mismo bug que en la app paciente,
-     encontrado en vivo el 14-sep-2026). -->
-<div class="login-wrap oculto" id="pantalla-carga-admin">
-  <img class="login-logo" src="img/logo.png" alt="">
+     encontrado en vivo el 14-sep-2026). Pantalla completa propia (pedido
+     de Alberto, 2026-09-15), no una tarjeta chica. -->
+<div class="oculto" id="pantalla-carga-admin">
+  <img src="img/logo.png" alt="">
   <div class="spinner"></div>
-  <p class="hint" id="texto-carga-admin" style="margin:0;">Ingresando a sistema de Administrador de Agenda...</p>
+  <p id="texto-carga-admin">Ingresando a sistema de Administrador de Agenda...</p>
 </div>
 
 <!-- PANEL -->
@@ -587,8 +598,8 @@ if (USUARIO && PIN) {
     if (res.ok) return;
     if (res.error === 'sin conexión con el servidor') {
       pantallaAdmin.innerHTML =
-        '<img class="login-logo" src="img/logo.png" alt="">' +
-        '<p class="hint" style="margin:0 0 14px;">No pudimos entrar — revisá tu conexión.</p>' +
+        '<img src="img/logo.png" alt="">' +
+        '<p>No pudimos entrar — revisá tu conexión.</p>' +
         '<button class="btn btn-primary btn-block" onclick="location.reload()">Reintentar</button>';
       return;
     }
