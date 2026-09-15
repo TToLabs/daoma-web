@@ -175,6 +175,15 @@
   .oculto { display: none !important; }
   .login-wrap { max-width: 320px; margin: 80px auto; padding: 28px 24px; text-align: center; }
   .login-logo { width: 64px; height: 64px; margin: 0 auto 10px; display: block; }
+  /* Rueda de carga: se ve mientras espera al servidor (login automático o
+     config_completa), para que quede claro que está trabajando y no
+     trabado (pedido de Alberto, 2026-09-15). */
+  .spinner {
+    width: 34px; height: 34px; margin: 0 auto 14px;
+    border: 3px solid var(--border); border-top-color: var(--primary);
+    border-radius: 50%; animation: girar 0.8s linear infinite;
+  }
+  @keyframes girar { to { transform: rotate(360deg); } }
   .topbar .brand-logo { width: 32px; height: 32px; }
   .msg { border-radius: var(--r-btn); padding: 10px 12px; font-size: 14px; margin-top: 10px; }
   .msg-error { background: var(--danger-soft); color: var(--danger); }
@@ -220,6 +229,16 @@
   <input type="password" id="pin-input" autocomplete="current-password" onkeydown="if(event.key==='Enter') login()">
   <button class="btn btn-primary btn-block" id="login-btn" onclick="login()">Entrar</button>
   <div id="login-error" class="msg msg-error oculto"></div>
+</div>
+
+<!-- Se ve mientras se intenta el login automático (usuario/contraseña ya
+     guardados) — sin esto, si la red falla justo ahí, la pantalla queda
+     en blanco sin ningún aviso (mismo bug que en la app paciente,
+     encontrado en vivo el 14-sep-2026). -->
+<div class="login-wrap oculto" id="pantalla-carga-admin">
+  <img class="login-logo" src="img/logo.png" alt="">
+  <div class="spinner"></div>
+  <p class="hint" id="texto-carga-admin" style="margin:0;">Ingresando a sistema de Administrador de Agenda...</p>
 </div>
 
 <!-- PANEL -->
@@ -474,25 +493,49 @@ var PIN = localStorage.getItem('daoma_pin') || '';
 var config = null;
 var DIAS_NOMBRE = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
+// Timeout con AbortController: sin esto, si la red falla justo al pedir
+// config_completa (la flakiness conocida hacia script.google.com), el
+// fetch queda colgado para siempre y la pantalla se ve "trabada" sin
+// ningún aviso (mismo bug encontrado en vivo en la app paciente,
+// 14-sep-2026: pantalla en blanco, sin error, sin reintento).
+function conTimeout(promesaFetch, ms) {
+  var controlador = new AbortController();
+  var vencido = setTimeout(function () { controlador.abort(); }, ms || 12000);
+  return promesaFetch(controlador.signal).finally(function () { clearTimeout(vencido); });
+}
 async function llamarGet(params) {
   params.usuario = USUARIO;
   params.pin = PIN;
   var qs = new URLSearchParams(params).toString();
-  var r = await fetch(API_URL + '?' + qs);
+  var r = await conTimeout(function (signal) { return fetch(API_URL + '?' + qs, { signal: signal }); });
   return r.json();
 }
 async function llamarPost(body) {
   body.usuario = USUARIO;
   body.pin = PIN;
-  var r = await fetch(API_URL, { method: 'POST', body: JSON.stringify(body) });
+  var r = await conTimeout(function (signal) { return fetch(API_URL, { method: 'POST', body: JSON.stringify(body), signal: signal }); });
   return r.json();
+}
+
+// Reintenta solo si la llamada se cae por red (fetch tira excepción) — un
+// "usuario o contraseña inválidos" real (respuesta ok:false) no se
+// reintenta, se devuelve tal cual.
+async function llamarGetConReintento(params, intentos) {
+  for (var i = 0; i < (intentos || 3); i++) {
+    try {
+      return await llamarGet(params);
+    } catch (e) {
+      if (i === (intentos || 3) - 1) return { ok: false, error: 'sin conexión con el servidor' };
+      await new Promise(function (r) { setTimeout(r, 1500 * (i + 1)); });
+    }
+  }
 }
 
 // Usa USUARIO/PIN ya cargados (de localStorage o recién tipeados) sin tocar
 // los inputs — así el auto-login al abrir la página no los pisa con el
 // valor vacío que tienen los campos antes de que el usuario escriba nada.
 async function entrarConCredenciales() {
-  var res = await llamarGet({ accion: 'config_completa' });
+  var res = await llamarGetConReintento({ accion: 'config_completa' }, 3);
   if (!res.ok) return res;
   localStorage.setItem('daoma_usuario', USUARIO);
   localStorage.setItem('daoma_pin', PIN);
@@ -533,7 +576,29 @@ function cerrarSesion() {
   location.reload();
 }
 
-if (USUARIO && PIN) entrarConCredenciales().catch(function(){});
+// Antes: entrarConCredenciales().catch(function(){}) — si la red fallaba,
+// el error quedaba silenciado y la pantalla se veía trabada, sin ningún
+// aviso ni forma de reintentar (mismo bug encontrado en la app paciente).
+if (USUARIO && PIN) {
+  document.getElementById('login-wrap').classList.add('oculto');
+  var pantallaAdmin = document.getElementById('pantalla-carga-admin');
+  pantallaAdmin.classList.remove('oculto');
+  entrarConCredenciales().then(function (res) {
+    if (res.ok) return;
+    if (res.error === 'sin conexión con el servidor') {
+      pantallaAdmin.innerHTML =
+        '<img class="login-logo" src="img/logo.png" alt="">' +
+        '<p class="hint" style="margin:0 0 14px;">No pudimos entrar — revisá tu conexión.</p>' +
+        '<button class="btn btn-primary btn-block" onclick="location.reload()">Reintentar</button>';
+      return;
+    }
+    // Usuario/contraseña guardados ya no valen (se cambiaron desde otro
+    // dispositivo, por ejemplo) — no tiene sentido reintentar lo mismo,
+    // se vuelve al formulario de login normal.
+    pantallaAdmin.classList.add('oculto');
+    document.getElementById('login-wrap').classList.remove('oculto');
+  });
+}
 
 // Agrupa las 7 vistas en 4 categorías para el menú (web arriba / app
 // abajo, ver detectarPlataforma()). "web" tiene una sola vista, así que

@@ -202,6 +202,15 @@
   .msg-error { background: var(--danger-soft); color: var(--danger); border-radius: var(--r-btn); padding: 10px 12px; font-size: 14px; margin-top: 12px; }
   .oculto { display: none !important; }
 
+  /* Rueda de carga: se ve mientras espera al servidor, para que quede
+     claro que está trabajando y no trabado (pedido de Alberto, 2026-09-15). */
+  .spinner {
+    width: 34px; height: 34px; margin: 0 auto 14px;
+    border: 3px solid var(--border); border-top-color: var(--primary);
+    border-radius: 50%; animation: girar 0.8s linear infinite;
+  }
+  @keyframes girar { to { transform: rotate(360deg); } }
+
   /* ---------- Info sobre acupuntura ---------- */
   .info-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); box-shadow: var(--shadow-sm); margin-top: 16px; overflow: hidden; }
   .info-toggle { width: 100%; padding: 16px 18px 4px; font: inherit; text-align: left; }
@@ -304,6 +313,15 @@
       Agendar
     </button>
   </nav>
+
+  <!-- Se ve mientras carga config_publica — sin esto, si la red falla
+       justo al abrir la app, queda todo en blanco sin ningún aviso. Se
+       borra sola en iniciar() apenas la carga sale bien. -->
+  <div class="card" id="pantalla-carga" style="text-align:center;padding:32px 18px;">
+    <img src="img/logo.png" alt="DAOMA" style="width:96px;height:96px;margin-bottom:14px;">
+    <div class="spinner"></div>
+    <p class="hint" style="margin:0;">Ingresando a DAOMA, sistema de agenda de citas para Acupuntura Integral...</p>
+  </div>
 
   <!-- CATEGORÍA: INFO -->
   <div class="vista-paciente" id="vista-p-info">
@@ -503,19 +521,53 @@ var estado = {
   reservaId: null
 };
 
+// Timeout con AbortController: sin esto, si la red falla justo al pedir
+// config_publica (la flakiness conocida hacia script.google.com), el
+// fetch queda colgado para siempre y la app se ve "muy lenta" o
+// directamente en blanco, sin ningún aviso — mismo bug que reportó
+// Alberto en vivo (14-sep-2026): pantalla vacía, sin error, sin reintento.
+function conTimeout(promesaFetch, ms) {
+  var controlador = new AbortController();
+  var vencido = setTimeout(function () { controlador.abort(); }, ms || 12000);
+  return promesaFetch(controlador.signal).finally(function () { clearTimeout(vencido); });
+}
 async function llamarGet(params) {
   var qs = new URLSearchParams(params).toString();
-  var r = await fetch(API_URL + '?' + qs);
+  var r = await conTimeout(function (signal) { return fetch(API_URL + '?' + qs, { signal: signal }); });
   return r.json();
 }
 async function llamarPost(body) {
-  var r = await fetch(API_URL, { method: 'POST', body: JSON.stringify(body) });
+  var r = await conTimeout(function (signal) { return fetch(API_URL, { method: 'POST', body: JSON.stringify(body), signal: signal }); });
   return r.json();
 }
 
+// Reintenta hasta 3 veces con una pequeña espera creciente antes de darse
+// por vencido — la falla de red hacia script.google.com suele ser
+// transitoria (un segundo intento casi siempre funciona).
+async function cargarConfigConReintento(intentos) {
+  for (var i = 0; i < (intentos || 3); i++) {
+    try {
+      var res = await llamarGet({ accion: 'config_publica' });
+      if (res.ok) return res;
+    } catch (e) { /* sigue al siguiente intento */ }
+    if (i < (intentos || 3) - 1) await new Promise(function (r) { setTimeout(r, 1500 * (i + 1)); });
+  }
+  return { ok: false, error: 'sin conexión con el servidor' };
+}
+
 async function iniciar() {
-  var res = await llamarGet({ accion: 'config_publica' });
-  if (!res.ok) { alert('No se pudo cargar la app: ' + res.error); return; }
+  var pantallaCarga = document.getElementById('pantalla-carga');
+  var res = await cargarConfigConReintento(3);
+  if (!res.ok) {
+    if (pantallaCarga) {
+      pantallaCarga.innerHTML =
+        '<img src="img/logo.png" alt="DAOMA" style="width:96px;height:96px;margin-bottom:14px;">' +
+        '<p class="hint" style="margin:0;">No pudimos cargar DAOMA — revisá tu conexión.</p>' +
+        '<button class="btn btn-primary" onclick="location.reload()">Reintentar</button>';
+    }
+    return;
+  }
+  if (pantallaCarga) pantallaCarga.remove();
   estado.config = res.config;
   pintarInfo();
   pintarTerapias();
