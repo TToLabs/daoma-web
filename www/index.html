@@ -202,26 +202,28 @@
   .msg-error { background: var(--danger-soft); color: var(--danger); border-radius: var(--r-btn); padding: 10px 12px; font-size: 14px; margin-top: 12px; }
   .oculto { display: none !important; }
 
-  /* Rueda de carga: se ve mientras espera al servidor, para que quede
-     claro que está trabajando y no trabado (pedido de Alberto, 2026-09-15). */
-  .spinner {
-    width: 34px; height: 34px; margin: 0 auto 14px;
-    border: 3px solid var(--border); border-top-color: var(--primary);
-    border-radius: 50%; animation: girar 0.8s linear infinite;
-  }
-  @keyframes girar { to { transform: rotate(360deg); } }
-
-  /* Splash de pantalla completa al arrancar — pantalla propia, ANTES de
-     entrar a la app (pedido de Alberto, 2026-09-15), no una tarjeta
-     adentro del contenido. */
+  /* Splash de pantalla completa al arrancar — mismo patrón que Rumbo
+     (Rumbo app/rumbo-admin/www/index.html, ".splash"): fondo sólido de
+     marca, logo con latido, puntitos animados en vez de rueda. Pantalla
+     propia, ANTES de entrar a la app (pedido de Alberto, 2026-09-15). */
   #pantalla-carga {
-    position: fixed; inset: 0; z-index: 9998; background: var(--bg);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 20px; text-align: center;
+    position: fixed; inset: 0; z-index: 9998; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 16px; padding: 32px;
+    background: var(--primary); color: #FFFFFF; text-align: center;
+    transition: opacity 0.35s ease;
   }
-  #pantalla-carga img { width: 110px; height: 110px; margin-bottom: 18px; }
-  #pantalla-carga p { color: var(--text-2); font-size: 15px; max-width: 300px; margin: 0; line-height: 1.5; }
-  #pantalla-carga .btn { max-width: 260px; margin-top: 18px; }
+  #pantalla-carga.oculta { opacity: 0; pointer-events: none; }
+  #pantalla-carga img { width: 130px; height: 130px; filter: drop-shadow(0 8px 24px rgba(0,0,0,0.35)); animation: cargaLatido 1.6s ease-in-out infinite; }
+  #pantalla-carga h1 { font-size: 27px; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
+  #pantalla-carga p { font-size: 17px; line-height: 1.5; max-width: 310px; margin: 0; opacity: 0.92; }
+  #pantalla-carga .puntos { display: flex; gap: 6px; margin-top: 2px; }
+  #pantalla-carga .puntos span { width: 8px; height: 8px; border-radius: 50%; background: #FFFFFF; opacity: 0.35; animation: cargaPunto 1.2s infinite; }
+  #pantalla-carga .puntos span:nth-child(2) { animation-delay: 0.2s; }
+  #pantalla-carga .puntos span:nth-child(3) { animation-delay: 0.4s; }
+  #pantalla-carga .btn { max-width: 260px; margin-top: 6px; }
+  @keyframes cargaLatido { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+  @keyframes cargaPunto { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { #pantalla-carga img, #pantalla-carga .puntos span { animation: none; } }
 
   /* ---------- Info sobre acupuntura ---------- */
   .info-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); box-shadow: var(--shadow-sm); margin-top: 16px; overflow: hidden; }
@@ -305,8 +307,9 @@
      mismo, sin dejar ver el resto de la app por debajo. -->
 <div id="pantalla-carga">
   <img src="img/logo.png" alt="DAOMA">
-  <div class="spinner"></div>
-  <p>Ingresando a DAOMA, sistema de agenda de citas para Acupuntura Integral...</p>
+  <h1>DAOMA</h1>
+  <p>Ingresando al sistema de agenda de citas para Acupuntura Integral...</p>
+  <div class="puntos" aria-hidden="true"><span></span><span></span><span></span></div>
 </div>
 
 <div class="app">
@@ -582,7 +585,10 @@ async function iniciar() {
     }
     return;
   }
-  if (pantallaCarga) pantallaCarga.remove();
+  if (pantallaCarga) {
+    pantallaCarga.classList.add('oculta');
+    setTimeout(function () { pantallaCarga.remove(); }, 400);
+  }
   estado.config = res.config;
   pintarInfo();
   pintarTerapias();
